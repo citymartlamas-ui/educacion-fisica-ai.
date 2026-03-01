@@ -1,124 +1,313 @@
 import React, { useState } from 'react'
-import { Dumbbell, Sparkles, BookOpen, LayoutDashboard, ShieldCheck, ChevronRight, ArrowLeft } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import {
+    Dumbbell, Sparkles, BookOpen, LayoutDashboard, ShieldCheck,
+    ChevronRight, ArrowLeft, ClipboardList, Trophy, Target,
+    Users, Zap, Heart, Brain, Calendar, FileText, Star,
+    Menu, X
+} from 'lucide-react'
 import Generator from './Generator'
 
+const fadeIn = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.6 }
+}
+
+const staggerContainer = {
+    animate: {
+        transition: { staggerChildren: 0.1 }
+    }
+}
+
 function App() {
-    const [showGenerator, setShowGenerator] = useState(false)
+    const [currentPage, setCurrentPage] = useState('home')
+    const [menuOpen, setMenuOpen] = useState(false)
 
     return (
-        <div className="min-h-screen">
-            {/* Navigation */}
-            <nav className="p-6 flex justify-between items-center max-w-7xl mx-auto sticky top-0 bg-[#0a0f1e]/50 backdrop-blur-lg z-50">
-                <div className="flex items-center gap-2 cursor-pointer" onClick={() => setShowGenerator(false)}>
-                    <Dumbbell className="text-[#00f2ff] w-8 h-8" />
-                    <span className="brand font-bold text-xl tracking-tighter">EDUFISICA <span className="text-[#39ff14]">AI</span></span>
+        <div>
+            {/* Background Glows */}
+            <div className="bg-glow bg-glow-1" />
+            <div className="bg-glow bg-glow-2" />
+            <div className="bg-glow bg-glow-3" />
+
+            {/* Navbar */}
+            <nav className="navbar">
+                <div className="navbar-inner">
+                    <div className="navbar-brand" onClick={() => setCurrentPage('home')}>
+                        <div className="navbar-brand-icon">
+                            <Dumbbell size={22} />
+                        </div>
+                        <div className="navbar-brand-text">
+                            EDUFISICA <span>AI</span>
+                        </div>
+                    </div>
+
+                    <ul className="navbar-links">
+                        <li><a href="#" className={currentPage === 'home' ? 'active' : ''} onClick={() => setCurrentPage('home')}>Inicio</a></li>
+                        <li><a href="#" className={currentPage === 'tools' ? 'active' : ''} onClick={() => setCurrentPage('tools')}>Herramientas</a></li>
+                        <li><a href="#" onClick={() => setCurrentPage('home')}>Recursos</a></li>
+                        <li><a href="#" onClick={() => setCurrentPage('home')}>Comunidad</a></li>
+                    </ul>
+
+                    <div className="navbar-actions">
+                        <button className="btn btn-secondary" onClick={() => setCurrentPage('home')}>
+                            Iniciar Sesión
+                        </button>
+                        <button className="btn btn-primary" onClick={() => setCurrentPage('tools')}>
+                            Registrarse
+                        </button>
+                    </div>
                 </div>
-                <div className="hidden md:flex gap-8 text-sm font-medium text-slate-400">
-                    <button onClick={() => setShowGenerator(true)} className="hover:text-white transition-colors">Generadores</button>
-                    <a href="#" className="hover:text-white transition-colors">Recursos</a>
-                    <a href="#" className="hover:text-white transition-colors">Comunidad</a>
-                </div>
-                <button className="glass px-6 py-2 text-sm font-semibold border-[#00f2ff] text-[#00f2ff] hover:bg-[#00f2ff] hover:text-[#0a0f1e] transition-all duration-300">
-                    INICIAR SESIÓN
-                </button>
             </nav>
 
+            {/* Content */}
             <AnimatePresence mode="wait">
-                {!showGenerator ? (
-                    <motion.main
-                        key="home"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="container pt-20 pb-32 text-center relative overflow-hidden"
-                    >
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.8 }}
-                        >
-                            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full glass mb-6 text-xs font-bold text-[#39ff14] border-[#39ff14]/30">
-                                <Sparkles size={14} /> POTENCIADO CON GEMINI AI
-                            </div>
-                            <h1 className="text-5xl md:text-7xl font-black mb-6 leading-tight">
-                                LA NUEVA ERA DE LA <br />
-                                <span className="title-gradient">EDUCACIÓN FÍSICA</span>
-                            </h1>
-                            <p className="max-w-2xl mx-auto text-slate-400 text-lg md:text-xl mb-10">
-                                Diseñada especialmente para docentes que recién comienzan. Genera planes anuales, sesiones y rúbricas en segundos, adaptadas a tu material disponible.
-                            </p>
-
-                            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                                <button
-                                    onClick={() => setShowGenerator(true)}
-                                    className="bg-[#00f2ff] text-[#0a0f1e] px-8 py-4 rounded-xl font-bold flex items-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-[0_0_20px_rgba(0,242,255,0.4)]"
-                                >
-                                    EMPEZAR AHORA <ChevronRight size={20} />
-                                </button>
-                                <button className="glass px-8 py-4 rounded-xl font-bold hover:bg-white/10 transition-all">
-                                    VER DEMO
-                                </button>
-                            </div>
-                        </motion.div>
-
-                        {/* Feature Cards Preview */}
-                        <div className="grid md:grid-cols-3 gap-6 mt-32">
-                            <FeatureCard
-                                icon={<LayoutDashboard className="text-[#00f2ff]" />}
-                                title="Semanario Inteligente"
-                                desc="Tus sesiones listas en un clic, alineadas al currículo nacional."
-                            />
-                            <FeatureCard
-                                icon={<ShieldCheck className="text-[#39ff14]" />}
-                                title="Gestión de Materiales"
-                                desc="Optimiza tus clases según los conos, balones y aros reales que tienes."
-                            />
-                            <FeatureCard
-                                icon={<BookOpen className="text-[#7000ff]" />}
-                                title="Banco de Recursos"
-                                desc="Cientos de juegos motores y dinámicas organizadas por edades."
-                            />
-                        </div>
-                    </motion.main>
-                ) : (
-                    <motion.div
-                        key="generator"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                    >
-                        <div className="container py-6">
-                            <button
-                                onClick={() => setShowGenerator(false)}
-                                className="flex items-center gap-2 text-slate-400 hover:text-white transition-colors mb-6 text-sm"
-                            >
-                                <ArrowLeft size={16} /> Volver al Inicio
-                            </button>
-                            <Generator />
-                        </div>
-                    </motion.div>
-                )}
+                {currentPage === 'home' && <HomePage key="home" onNavigate={setCurrentPage} />}
+                {currentPage === 'tools' && <ToolsPage key="tools" onNavigate={setCurrentPage} />}
+                {currentPage === 'generator' && <GeneratorPage key="generator" onNavigate={setCurrentPage} />}
             </AnimatePresence>
 
-            {/* Background decoration elements */}
-            <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#00f2ff] opacity-5 blur-[150px] rounded-full -z-10" />
-            <div className="fixed bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#39ff14] opacity-5 blur-[150px] rounded-full -z-10" />
+            {/* Footer */}
+            <footer className="footer">
+                <div className="container">
+                    <ul className="footer-links">
+                        <li><a href="#">Términos</a></li>
+                        <li><a href="#">Privacidad</a></li>
+                        <li><a href="#">Contacto</a></li>
+                        <li><a href="#">Soporte</a></li>
+                    </ul>
+                    <p>© 2026 EduFisica AI — Hecho con 💪 para docentes de Educación Física</p>
+                </div>
+            </footer>
         </div>
     )
 }
 
-function FeatureCard({ icon, title, desc }) {
+/* ============================================
+   HOME PAGE
+   ============================================ */
+function HomePage({ onNavigate }) {
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+
+            {/* Hero */}
+            <section className="hero">
+                <div className="container">
+                    <motion.div {...fadeIn}>
+                        <div className="hero-badge">
+                            <Sparkles size={14} /> POTENCIADO CON INTELIGENCIA ARTIFICIAL
+                        </div>
+                        <h1>
+                            TU ASISTENTE DE<br />
+                            <span className="text-gradient">EDUCACIÓN FÍSICA</span>
+                        </h1>
+                        <p className="hero-subtitle">
+                            La plataforma que todo docente nuevo necesita. Genera sesiones, gestiona materiales
+                            y planifica tu año escolar en minutos, no en horas.
+                        </p>
+                        <div className="hero-buttons">
+                            <button className="btn btn-primary btn-lg" onClick={() => onNavigate('tools')}>
+                                EMPEZAR GRATIS <ChevronRight size={20} />
+                            </button>
+                            <button className="btn btn-secondary btn-lg">
+                                VER DEMOSTRACIÓN
+                            </button>
+                        </div>
+                    </motion.div>
+
+                    <motion.div
+                        className="hero-stats"
+                        initial={{ opacity: 0, y: 30 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4 }}
+                    >
+                        <div className="hero-stat">
+                            <div className="hero-stat-value">12+</div>
+                            <div className="hero-stat-label">Herramientas IA</div>
+                        </div>
+                        <div className="hero-stat">
+                            <div className="hero-stat-value">500+</div>
+                            <div className="hero-stat-label">Juegos Motores</div>
+                        </div>
+                        <div className="hero-stat">
+                            <div className="hero-stat-value">100%</div>
+                            <div className="hero-stat-label">Currículo Nacional</div>
+                        </div>
+                    </motion.div>
+                </div>
+            </section>
+
+            {/* Features */}
+            <section className="section">
+                <div className="container">
+                    <div className="section-header">
+                        <div className="overline">¿Por qué EduFisica AI?</div>
+                        <h2>Todo lo que necesitas en <span className="text-gradient">un solo lugar</span></h2>
+                        <p>Diseñada para docentes de Educación Física que quieren ahorrar tiempo y ofrecer clases increíbles.</p>
+                    </div>
+
+                    <motion.div
+                        className="features-grid"
+                        variants={staggerContainer}
+                        initial="initial"
+                        whileInView="animate"
+                        viewport={{ once: true }}
+                    >
+                        <FeatureCard
+                            icon={<Brain size={24} />}
+                            title="IA Especializada en EF"
+                            desc="No es un generador genérico. Nuestra IA entiende de motricidad, juegos y pedagogía deportiva."
+                            color="primary"
+                        />
+                        <FeatureCard
+                            icon={<ShieldCheck size={24} />}
+                            title="Gestiona tu Material"
+                            desc="Dile qué tienes (3 balones, 5 conos) y la IA adaptará las sesiones a tu realidad."
+                            color="secondary"
+                        />
+                        <FeatureCard
+                            icon={<Calendar size={24} />}
+                            title="Plan Anual Automático"
+                            desc="Genera tu programación anual alineada al currículo nacional en un clic."
+                            color="accent"
+                        />
+                        <FeatureCard
+                            icon={<Target size={24} />}
+                            title="Rúbricas Inteligentes"
+                            desc="Evalúa habilidades motrices (equilibrio, coordinación, velocidad) con criterios objetivos."
+                            color="primary"
+                        />
+                        <FeatureCard
+                            icon={<Heart size={24} />}
+                            title="Primeros Auxilios"
+                            desc="Accede a un módulo de consulta rápida para lesiones comunes en clase de EF."
+                            color="secondary"
+                        />
+                        <FeatureCard
+                            icon={<Trophy size={24} />}
+                            title="Pruebas Físicas"
+                            desc="Calculadora automática de Test de Cooper, IMC y pruebas de velocidad."
+                            color="accent"
+                        />
+                    </motion.div>
+                </div>
+            </section>
+
+            {/* CTA */}
+            <section className="section" style={{ paddingBottom: '6rem' }}>
+                <div className="container text-center">
+                    <motion.div
+                        className="glass-static"
+                        style={{ padding: '3.5rem 2rem', borderRadius: 'var(--radius-xl)' }}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        whileInView={{ opacity: 1, scale: 1 }}
+                        viewport={{ once: true }}
+                    >
+                        <h2 style={{ marginBottom: '1rem' }}>
+                            ¿Listo para revolucionar tus <span className="text-gradient">clases de EF</span>?
+                        </h2>
+                        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', maxWidth: '500px', margin: '0 auto 2rem' }}>
+                            Únete a la comunidad de docentes que ya están usando IA para planificar mejor.
+                        </p>
+                        <button className="btn btn-primary btn-lg" onClick={() => onNavigate('tools')}>
+                            CREAR MI CUENTA GRATIS <Zap size={18} />
+                        </button>
+                    </motion.div>
+                </div>
+            </section>
+        </motion.div>
+    )
+}
+
+/* ============================================
+   TOOLS PAGE
+   ============================================ */
+function ToolsPage({ onNavigate }) {
+    const tools = [
+        { num: '01', title: 'Generador de Sesiones', desc: 'Crea sesiones de EF completas: calentamiento, desarrollo y vuelta a la calma.', icon: <ClipboardList size={18} />, tag: 'Más Popular' },
+        { num: '02', title: 'Plan Anual', desc: 'Genera tu programación anual alineada al currículo nacional.', icon: <Calendar size={18} />, tag: 'IA Avanzada' },
+        { num: '03', title: 'Unidades Didácticas', desc: 'Diseña unidades completas con competencias y desempeños.', icon: <BookOpen size={18} />, tag: 'Nuevo' },
+        { num: '04', title: 'Rúbricas de Evaluación', desc: 'Crea rúbricas específicas para habilidades motrices.', icon: <FileText size={18} />, tag: 'IA Avanzada' },
+        { num: '05', title: 'Banco de Juegos', desc: 'Más de 500 juegos motores organizados por edad y objetivo.', icon: <Trophy size={18} />, tag: 'Recurso' },
+        { num: '06', title: 'Calculadora Física', desc: 'Test de Cooper, IMC, resistencia y más. Resultados al instante.', icon: <Target size={18} />, tag: 'Herramienta' },
+    ]
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <section className="section">
+                <div className="container">
+                    <div className="section-header">
+                        <div className="overline">Herramientas</div>
+                        <h2>Tus <span className="text-gradient">Superpoderes</span> Docentes</h2>
+                        <p>Cada herramienta está diseñada específicamente para el área de Educación Física.</p>
+                    </div>
+
+                    <motion.div
+                        className="tools-grid"
+                        variants={staggerContainer}
+                        initial="initial"
+                        animate="animate"
+                    >
+                        {tools.map((tool, i) => (
+                            <motion.div
+                                key={i}
+                                variants={fadeIn}
+                                className="glass tool-card"
+                                onClick={() => tool.num === '01' && onNavigate('generator')}
+                            >
+                                <div className="tool-card-header">
+                                    <span className="tool-card-number">{tool.num}</span>
+                                    {tool.icon}
+                                </div>
+                                <div className="tool-card-title">{tool.title}</div>
+                                <div className="tool-card-desc">{tool.desc}</div>
+                                <div className="tool-card-tag">
+                                    <Star size={12} /> {tool.tag}
+                                </div>
+                            </motion.div>
+                        ))}
+                    </motion.div>
+                </div>
+            </section>
+        </motion.div>
+    )
+}
+
+/* ============================================
+   GENERATOR PAGE
+   ============================================ */
+function GeneratorPage({ onNavigate }) {
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
+                <button
+                    className="btn btn-secondary"
+                    onClick={() => onNavigate('tools')}
+                    style={{ marginBottom: '1.5rem' }}
+                >
+                    <ArrowLeft size={16} /> Volver a Herramientas
+                </button>
+                <Generator />
+            </div>
+        </motion.div>
+    )
+}
+
+/* ============================================
+   FEATURE CARD COMPONENT
+   ============================================ */
+function FeatureCard({ icon, title, desc, color }) {
     return (
         <motion.div
-            whileHover={{ y: -10 }}
-            className="glass p-8 text-left group hover:border-[#00f2ff]/50 transition-all"
+            variants={fadeIn}
+            className="glass feature-card"
         >
-            <div className="mb-4 bg-white/5 w-12 h-12 flex items-center justify-center rounded-lg group-hover:bg-white/10 transition-all">
+            <div className={`feature-card-icon ${color}`}>
                 {icon}
             </div>
-            <h3 className="text-xl font-bold mb-2 tracking-tight group-hover:text-[#00f2ff] transition-all">{title}</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">{desc}</p>
+            <h3>{title}</h3>
+            <p>{desc}</p>
         </motion.div>
     )
 }

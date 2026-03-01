@@ -1,16 +1,13 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+
+console.log("Gemini API Key loaded:", apiKey ? "Yes (" + apiKey.substring(0, 10) + "...)" : "NO - MISSING!");
+
 const genAI = new GoogleGenerativeAI(apiKey);
 
 export const model = genAI.getGenerativeModel({
-    model: "gemini-1.5-flash",
-    generationConfig: {
-        temperature: 0.7,
-        topP: 0.95,
-        topK: 64,
-        maxOutputTokens: 8192,
-    }
+    model: "gemini-2.0-flash",
 });
 
 export const generateLessonPlan = async (prompt) => {
@@ -19,7 +16,8 @@ export const generateLessonPlan = async (prompt) => {
         const response = await result.response;
         return response.text();
     } catch (error) {
-        console.error("Error generating lesson plan:", error);
-        return "Error al generar el plan. Verifica tu API Key de Gemini.";
+        console.error("GEMINI ERROR DETAILS:", error.message);
+        console.error("FULL ERROR:", JSON.stringify(error, null, 2));
+        return "Error: " + error.message;
     }
 };
