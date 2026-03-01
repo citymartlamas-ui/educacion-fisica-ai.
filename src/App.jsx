@@ -4,8 +4,10 @@ import {
     Dumbbell, Sparkles, BookOpen, LayoutDashboard, ShieldCheck,
     ChevronRight, ArrowLeft, ClipboardList, Trophy, Target,
     Users, Zap, Heart, Brain, Calendar, FileText, Star,
-    Menu, X
+    LogOut, User
 } from 'lucide-react'
+import { useAuth } from './AuthContext'
+import LoginPage from './LoginPage'
 import Generator from './Generator'
 
 const fadeIn = {
@@ -21,8 +23,27 @@ const staggerContainer = {
 }
 
 function App() {
+    const { user, loading, logout } = useAuth()
     const [currentPage, setCurrentPage] = useState('home')
-    const [menuOpen, setMenuOpen] = useState(false)
+
+    if (loading) {
+        return (
+            <div style={{
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'var(--color-bg)'
+            }}>
+                <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                >
+                    <Dumbbell size={40} style={{ color: 'var(--color-primary)' }} />
+                </motion.div>
+            </div>
+        )
+    }
 
     return (
         <div>
@@ -31,55 +52,90 @@ function App() {
             <div className="bg-glow bg-glow-2" />
             <div className="bg-glow bg-glow-3" />
 
-            {/* Navbar */}
-            <nav className="navbar">
-                <div className="navbar-inner">
-                    <div className="navbar-brand" onClick={() => setCurrentPage('home')}>
-                        <div className="navbar-brand-icon">
-                            <Dumbbell size={22} />
+            {/* Navbar - hidden on login page */}
+            {currentPage !== 'login' && (
+                <nav className="navbar">
+                    <div className="navbar-inner">
+                        <div className="navbar-brand" onClick={() => setCurrentPage('home')}>
+                            <div className="navbar-brand-icon">
+                                <Dumbbell size={22} />
+                            </div>
+                            <div className="navbar-brand-text">
+                                EDUFISICA <span>AI</span>
+                            </div>
                         </div>
-                        <div className="navbar-brand-text">
-                            EDUFISICA <span>AI</span>
+
+                        <ul className="navbar-links">
+                            <li><a href="#" className={currentPage === 'home' ? 'active' : ''} onClick={() => setCurrentPage('home')}>Inicio</a></li>
+                            <li><a href="#" className={currentPage === 'tools' ? 'active' : ''} onClick={() => setCurrentPage('tools')}>Herramientas</a></li>
+                            <li><a href="#" onClick={() => setCurrentPage('home')}>Recursos</a></li>
+                            <li><a href="#" onClick={() => setCurrentPage('home')}>Comunidad</a></li>
+                        </ul>
+
+                        <div className="navbar-actions">
+                            {user ? (
+                                <>
+                                    <div style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.5rem',
+                                        padding: '0.4rem 0.75rem',
+                                        background: 'var(--glass-bg)',
+                                        border: '1px solid var(--glass-border)',
+                                        borderRadius: 'var(--radius-full)',
+                                        fontSize: '0.8rem',
+                                        color: 'var(--text-secondary)'
+                                    }}>
+                                        {user.photoURL ? (
+                                            <img src={user.photoURL} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }} />
+                                        ) : (
+                                            <User size={14} />
+                                        )}
+                                        <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {user.displayName || user.email}
+                                        </span>
+                                    </div>
+                                    <button className="btn-icon btn" onClick={logout} title="Cerrar sesión">
+                                        <LogOut size={16} />
+                                    </button>
+                                </>
+                            ) : (
+                                <>
+                                    <button className="btn btn-secondary" onClick={() => setCurrentPage('login')}>
+                                        Iniciar Sesión
+                                    </button>
+                                    <button className="btn btn-primary" onClick={() => setCurrentPage('login')}>
+                                        Registrarse
+                                    </button>
+                                </>
+                            )}
                         </div>
                     </div>
-
-                    <ul className="navbar-links">
-                        <li><a href="#" className={currentPage === 'home' ? 'active' : ''} onClick={() => setCurrentPage('home')}>Inicio</a></li>
-                        <li><a href="#" className={currentPage === 'tools' ? 'active' : ''} onClick={() => setCurrentPage('tools')}>Herramientas</a></li>
-                        <li><a href="#" onClick={() => setCurrentPage('home')}>Recursos</a></li>
-                        <li><a href="#" onClick={() => setCurrentPage('home')}>Comunidad</a></li>
-                    </ul>
-
-                    <div className="navbar-actions">
-                        <button className="btn btn-secondary" onClick={() => setCurrentPage('home')}>
-                            Iniciar Sesión
-                        </button>
-                        <button className="btn btn-primary" onClick={() => setCurrentPage('tools')}>
-                            Registrarse
-                        </button>
-                    </div>
-                </div>
-            </nav>
+                </nav>
+            )}
 
             {/* Content */}
             <AnimatePresence mode="wait">
-                {currentPage === 'home' && <HomePage key="home" onNavigate={setCurrentPage} />}
-                {currentPage === 'tools' && <ToolsPage key="tools" onNavigate={setCurrentPage} />}
+                {currentPage === 'home' && <HomePage key="home" onNavigate={setCurrentPage} user={user} />}
+                {currentPage === 'tools' && <ToolsPage key="tools" onNavigate={setCurrentPage} user={user} />}
                 {currentPage === 'generator' && <GeneratorPage key="generator" onNavigate={setCurrentPage} />}
+                {currentPage === 'login' && <LoginPage key="login" onNavigate={setCurrentPage} />}
             </AnimatePresence>
 
             {/* Footer */}
-            <footer className="footer">
-                <div className="container">
-                    <ul className="footer-links">
-                        <li><a href="#">Términos</a></li>
-                        <li><a href="#">Privacidad</a></li>
-                        <li><a href="#">Contacto</a></li>
-                        <li><a href="#">Soporte</a></li>
-                    </ul>
-                    <p>© 2026 EduFisica AI — Hecho con 💪 para docentes de Educación Física</p>
-                </div>
-            </footer>
+            {currentPage !== 'login' && (
+                <footer className="footer">
+                    <div className="container">
+                        <ul className="footer-links">
+                            <li><a href="#">Términos</a></li>
+                            <li><a href="#">Privacidad</a></li>
+                            <li><a href="#">Contacto</a></li>
+                            <li><a href="#">Soporte</a></li>
+                        </ul>
+                        <p>© 2026 EduFisica AI — Hecho con 💪 para docentes de Educación Física</p>
+                    </div>
+                </footer>
+            )}
         </div>
     )
 }
@@ -87,7 +143,7 @@ function App() {
 /* ============================================
    HOME PAGE
    ============================================ */
-function HomePage({ onNavigate }) {
+function HomePage({ onNavigate, user }) {
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
 
@@ -107,8 +163,8 @@ function HomePage({ onNavigate }) {
                             y planifica tu año escolar en minutos, no en horas.
                         </p>
                         <div className="hero-buttons">
-                            <button className="btn btn-primary btn-lg" onClick={() => onNavigate('tools')}>
-                                EMPEZAR GRATIS <ChevronRight size={20} />
+                            <button className="btn btn-primary btn-lg" onClick={() => onNavigate(user ? 'tools' : 'login')}>
+                                {user ? 'IR A MIS HERRAMIENTAS' : 'EMPEZAR GRATIS'} <ChevronRight size={20} />
                             </button>
                             <button className="btn btn-secondary btn-lg">
                                 VER DEMOSTRACIÓN
@@ -154,42 +210,12 @@ function HomePage({ onNavigate }) {
                         whileInView="animate"
                         viewport={{ once: true }}
                     >
-                        <FeatureCard
-                            icon={<Brain size={24} />}
-                            title="IA Especializada en EF"
-                            desc="No es un generador genérico. Nuestra IA entiende de motricidad, juegos y pedagogía deportiva."
-                            color="primary"
-                        />
-                        <FeatureCard
-                            icon={<ShieldCheck size={24} />}
-                            title="Gestiona tu Material"
-                            desc="Dile qué tienes (3 balones, 5 conos) y la IA adaptará las sesiones a tu realidad."
-                            color="secondary"
-                        />
-                        <FeatureCard
-                            icon={<Calendar size={24} />}
-                            title="Plan Anual Automático"
-                            desc="Genera tu programación anual alineada al currículo nacional en un clic."
-                            color="accent"
-                        />
-                        <FeatureCard
-                            icon={<Target size={24} />}
-                            title="Rúbricas Inteligentes"
-                            desc="Evalúa habilidades motrices (equilibrio, coordinación, velocidad) con criterios objetivos."
-                            color="primary"
-                        />
-                        <FeatureCard
-                            icon={<Heart size={24} />}
-                            title="Primeros Auxilios"
-                            desc="Accede a un módulo de consulta rápida para lesiones comunes en clase de EF."
-                            color="secondary"
-                        />
-                        <FeatureCard
-                            icon={<Trophy size={24} />}
-                            title="Pruebas Físicas"
-                            desc="Calculadora automática de Test de Cooper, IMC y pruebas de velocidad."
-                            color="accent"
-                        />
+                        <FeatureCard icon={<Brain size={24} />} title="IA Especializada en EF" desc="No es un generador genérico. Nuestra IA entiende de motricidad, juegos y pedagogía deportiva." color="primary" />
+                        <FeatureCard icon={<ShieldCheck size={24} />} title="Gestiona tu Material" desc="Dile qué tienes (3 balones, 5 conos) y la IA adaptará las sesiones a tu realidad." color="secondary" />
+                        <FeatureCard icon={<Calendar size={24} />} title="Plan Anual Automático" desc="Genera tu programación anual alineada al currículo nacional en un clic." color="accent" />
+                        <FeatureCard icon={<Target size={24} />} title="Rúbricas Inteligentes" desc="Evalúa habilidades motrices (equilibrio, coordinación, velocidad) con criterios objetivos." color="primary" />
+                        <FeatureCard icon={<Heart size={24} />} title="Primeros Auxilios" desc="Accede a un módulo de consulta rápida para lesiones comunes en clase de EF." color="secondary" />
+                        <FeatureCard icon={<Trophy size={24} />} title="Pruebas Físicas" desc="Calculadora automática de Test de Cooper, IMC y pruebas de velocidad." color="accent" />
                     </motion.div>
                 </div>
             </section>
@@ -210,8 +236,8 @@ function HomePage({ onNavigate }) {
                         <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', maxWidth: '500px', margin: '0 auto 2rem' }}>
                             Únete a la comunidad de docentes que ya están usando IA para planificar mejor.
                         </p>
-                        <button className="btn btn-primary btn-lg" onClick={() => onNavigate('tools')}>
-                            CREAR MI CUENTA GRATIS <Zap size={18} />
+                        <button className="btn btn-primary btn-lg" onClick={() => onNavigate(user ? 'tools' : 'login')}>
+                            {user ? 'IR A MIS HERRAMIENTAS' : 'CREAR MI CUENTA GRATIS'} <Zap size={18} />
                         </button>
                     </motion.div>
                 </div>
@@ -223,7 +249,7 @@ function HomePage({ onNavigate }) {
 /* ============================================
    TOOLS PAGE
    ============================================ */
-function ToolsPage({ onNavigate }) {
+function ToolsPage({ onNavigate, user }) {
     const tools = [
         { num: '01', title: 'Generador de Sesiones', desc: 'Crea sesiones de EF completas: calentamiento, desarrollo y vuelta a la calma.', icon: <ClipboardList size={18} />, tag: 'Más Popular' },
         { num: '02', title: 'Plan Anual', desc: 'Genera tu programación anual alineada al currículo nacional.', icon: <Calendar size={18} />, tag: 'IA Avanzada' },
@@ -237,6 +263,24 @@ function ToolsPage({ onNavigate }) {
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <section className="section">
                 <div className="container">
+                    {user && (
+                        <motion.div
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            style={{
+                                padding: '1rem 1.5rem',
+                                background: 'var(--color-primary-glow)',
+                                border: '1px solid rgba(0, 229, 255, 0.2)',
+                                borderRadius: 'var(--radius-md)',
+                                marginBottom: '2rem',
+                                fontSize: '0.9rem',
+                                color: 'var(--text-primary)'
+                            }}
+                        >
+                            👋 ¡Hola, <strong>{user.displayName || user.email}</strong>! Selecciona una herramienta para comenzar.
+                        </motion.div>
+                    )}
+
                     <div className="section-header">
                         <div className="overline">Herramientas</div>
                         <h2>Tus <span className="text-gradient">Superpoderes</span> Docentes</h2>
@@ -254,7 +298,13 @@ function ToolsPage({ onNavigate }) {
                                 key={i}
                                 variants={fadeIn}
                                 className="glass tool-card"
-                                onClick={() => tool.num === '01' && onNavigate('generator')}
+                                onClick={() => {
+                                    if (!user) {
+                                        onNavigate('login');
+                                    } else if (tool.num === '01') {
+                                        onNavigate('generator');
+                                    }
+                                }}
                             >
                                 <div className="tool-card-header">
                                     <span className="tool-card-number">{tool.num}</span>
@@ -281,11 +331,7 @@ function GeneratorPage({ onNavigate }) {
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
-                <button
-                    className="btn btn-secondary"
-                    onClick={() => onNavigate('tools')}
-                    style={{ marginBottom: '1.5rem' }}
-                >
+                <button className="btn btn-secondary" onClick={() => onNavigate('tools')} style={{ marginBottom: '1.5rem' }}>
                     <ArrowLeft size={16} /> Volver a Herramientas
                 </button>
                 <Generator />
@@ -299,13 +345,8 @@ function GeneratorPage({ onNavigate }) {
    ============================================ */
 function FeatureCard({ icon, title, desc, color }) {
     return (
-        <motion.div
-            variants={fadeIn}
-            className="glass feature-card"
-        >
-            <div className={`feature-card-icon ${color}`}>
-                {icon}
-            </div>
+        <motion.div variants={fadeIn} className="glass feature-card">
+            <div className={`feature-card-icon ${color}`}>{icon}</div>
             <h3>{title}</h3>
             <p>{desc}</p>
         </motion.div>
