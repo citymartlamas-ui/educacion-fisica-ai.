@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Sparkles, Send, Loader2, ClipboardCheck, Dumbbell,
     Copy, Download, Share2, Zap, ArrowLeft,
-    GraduationCap, BookOpen, Clock, Package
+    GraduationCap, BookOpen, Clock, Package, Building2, User
 } from 'lucide-react';
 import { generateLessonPlan } from './gemini';
 
@@ -13,6 +13,9 @@ function Generator() {
     const [copied, setCopied] = useState(false);
 
     const [formData, setFormData] = useState({
+        dre: '',
+        ugel: '',
+        director: '',
         level: 'Primaria',
         topic: '',
         materials: '',
@@ -20,11 +23,27 @@ function Generator() {
         competencia: 'Se desenvuelve de manera autónoma a través de su motricidad'
     });
 
+    const suggestions = [
+        "Habilidades motrices básicas",
+        "Coordinación óculo-manual",
+        "Atletismo: Carreras de velocidad",
+        "Fútbol: Conducción y pase",
+        "Voleibol: Voleo y recepción",
+        "Gimnasia rítmica",
+        "Juegos tradicionales",
+        "Vida saludable y nutrición"
+    ];
+
     const handleGenerate = async () => {
         if (!formData.topic) return;
         setLoading(true);
 
         const prompt = `Eres un docente experto de Educación Física en Perú. Genera una sesión de aprendizaje detallada alineada al CNEB.
+        
+        DATOS INFORMATIVOS:
+        DRE: ${formData.dre || 'No especificado'}
+        UGEL: ${formData.ugel || 'No especificado'}
+        Director: ${formData.director || 'No especificado'}
         Nivel/Grado: ${formData.level}. 
         Tema principal: ${formData.topic}. 
         Competencia: ${formData.competencia}.
@@ -32,12 +51,12 @@ function Generator() {
         Duración: ${formData.duration}.
         
         La sesión debe seguir la estructura:
-        1. Datos Informativos (Propósito, Grado, Tiempo).
+        1. Datos Informativos (DRE, UGEL, Director, Propósito, Grado, Tiempo).
         2. Inicio (Activación corporal, Saberes previos, Motivación).
         3. Desarrollo (Reto motriz, Actividades principales, Variantes pedagógicas).
         4. Cierre (Vuelta a la calma, Metacognición, Reflexión).
         
-        Usa un lenguaje profesional y motivador para el docente.`;
+        Usa un lenguaje profesional y motivador para el docente. Presenta la información de forma estructurada y estética.`;
 
         try {
             const response = await generateLessonPlan(prompt);
@@ -57,101 +76,173 @@ function Generator() {
 
     return (
         <div style={{ minHeight: '80vh' }}>
-            <div className="generator-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
+            <div className="generator-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))',
+                gap: '2rem'
+            }}>
 
                 {/* Left Side: Input Form */}
                 <motion.div
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     className="glass"
-                    style={{ padding: '2rem', height: 'fit-content', borderTop: '2px solid var(--color-primary)' }}
+                    style={{
+                        padding: '2rem',
+                        height: 'fit-content',
+                        borderTop: '2px solid var(--color-primary)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '1.5rem'
+                    }}
                 >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
                         <div style={{ padding: '0.75rem', background: 'var(--color-primary-glow)', borderRadius: 'var(--radius-md)', color: 'var(--color-primary)' }}>
                             <Sparkles size={24} />
                         </div>
                         <div>
                             <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Nueva Sesión</h2>
-                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Inteligencia Artificial Especializada</p>
+                            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>IA Experta en CNEB</p>
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                    {/* Informative Data Section */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                         <div className="form-group">
-                            <label className="form-label">Nivel / Grado</label>
-                            <select
-                                className="form-select"
-                                value={formData.level}
-                                onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                            >
-                                <option>Inicial (3-5 años)</option>
-                                <option>Primaria (Baja)</option>
-                                <option>Primaria (Alta)</option>
-                                <option>Secundaria (1° - 2°)</option>
-                                <option>Secundaria (3° - 5°)</option>
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Tema Principal</label>
+                            <label className="form-label">DRE</label>
                             <input
                                 type="text"
-                                placeholder="Ej: Coordinación con balón, Atletismo..."
                                 className="form-input"
-                                value={formData.topic}
-                                onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                                placeholder="Ej: Lima Metrop."
+                                value={formData.dre}
+                                onChange={(e) => setFormData({ ...formData, dre: e.target.value })}
                             />
                         </div>
-
                         <div className="form-group">
-                            <label className="form-label">Competencia CNEB</label>
-                            <select
-                                className="form-select"
-                                value={formData.competencia}
-                                onChange={(e) => setFormData({ ...formData, competencia: e.target.value })}
-                            >
-                                <option>Se desenvuelve de manera autónoma a través de su motricidad</option>
-                                <option>Asume una vida saludable</option>
-                                <option>Interactúa a través de sus habilidades sociomotrices</option>
-                            </select>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Duración</label>
-                            <div style={{ display: 'flex', gap: '1rem' }}>
-                                {['45 min', '90 min'].map(t => (
-                                    <button
-                                        key={t}
-                                        className={`btn ${formData.duration === t ? 'btn-primary' : 'btn-secondary'}`}
-                                        style={{ flex: 1 }}
-                                        onClick={() => setFormData({ ...formData, duration: t })}
-                                    >
-                                        <Clock size={16} /> {t}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Materiales (Opcional)</label>
-                            <textarea
-                                placeholder="Ej: 5 pelotas, 10 conos..."
-                                className="form-textarea"
-                                value={formData.materials}
-                                onChange={(e) => setFormData({ ...formData, materials: e.target.value })}
-                                style={{ minHeight: '80px' }}
+                            <label className="form-label">UGEL</label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Ej: UGEL 03"
+                                value={formData.ugel}
+                                onChange={(e) => setFormData({ ...formData, ugel: e.target.value })}
                             />
                         </div>
-
-                        <button
-                            onClick={handleGenerate}
-                            disabled={loading || !formData.topic}
-                            className="btn btn-primary"
-                            style={{ padding: '1.25rem', marginTop: '1rem', width: '100%', fontSize: '1rem' }}
-                        >
-                            {loading ? <Loader2 className="animate-spin" /> : <><Sparkles size={18} /> GENERAR SESIÓN MAESTRA</>}
-                        </button>
                     </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Director(a)</label>
+                        <div style={{ position: 'relative' }}>
+                            <User size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                            <input
+                                type="text"
+                                className="form-input"
+                                placeholder="Nombre del director"
+                                style={{ paddingLeft: '2.5rem' }}
+                                value={formData.director}
+                                onChange={(e) => setFormData({ ...formData, director: e.target.value })}
+                            />
+                        </div>
+                    </div>
+
+                    <div style={{ height: '1px', background: 'var(--glass-border)', margin: '0.5rem 0' }} />
+
+                    {/* Session Details */}
+                    <div className="form-group">
+                        <label className="form-label">Nivel / Grado</label>
+                        <select
+                            className="form-select"
+                            value={formData.level}
+                            onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                        >
+                            <option>Inicial (3-5 años)</option>
+                            <option>Primaria (Baja)</option>
+                            <option>Primaria (Alta)</option>
+                            <option>Secundaria (1° - 2°)</option>
+                            <option>Secundaria (3° - 5°)</option>
+                        </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Tema Principal</label>
+                        <input
+                            type="text"
+                            placeholder="Ej: Coordinación con balón..."
+                            className="form-input"
+                            value={formData.topic}
+                            onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                        />
+                        {/* Suggestions */}
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+                            {suggestions.map(s => (
+                                <button
+                                    key={s}
+                                    onClick={() => setFormData({ ...formData, topic: s })}
+                                    style={{
+                                        fontSize: '0.7rem',
+                                        padding: '0.3rem 0.6rem',
+                                        borderRadius: 'var(--radius-sm)',
+                                        background: formData.topic === s ? 'var(--color-primary)' : 'var(--glass-bg)',
+                                        border: '1px solid var(--glass-border)',
+                                        color: formData.topic === s ? 'white' : 'var(--text-secondary)',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    {s}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Competencia CNEB</label>
+                        <select
+                            className="form-select"
+                            value={formData.competencia}
+                            onChange={(e) => setFormData({ ...formData, competencia: e.target.value })}
+                        >
+                            <option>Se desenvuelve de manera autónoma a través de su motricidad</option>
+                            <option>Asume una vida saludable</option>
+                            <option>Interactúa a través de sus habilidades sociomotrices</option>
+                        </select>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Duración</label>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                            {['45 min', '90 min'].map(t => (
+                                <button
+                                    key={t}
+                                    className={`btn ${formData.duration === t ? 'btn-primary' : 'btn-secondary'}`}
+                                    style={{ flex: 1 }}
+                                    onClick={() => setFormData({ ...formData, duration: t })}
+                                >
+                                    <Clock size={16} /> {t}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="form-group">
+                        <label className="form-label">Materiales (Opcional)</label>
+                        <textarea
+                            placeholder="Ej: 5 pelotas, 10 conos..."
+                            className="form-textarea"
+                            value={formData.materials}
+                            onChange={(e) => setFormData({ ...formData, materials: e.target.value })}
+                            style={{ minHeight: '80px' }}
+                        />
+                    </div>
+
+                    <button
+                        onClick={handleGenerate}
+                        disabled={loading || !formData.topic}
+                        className="btn btn-primary"
+                        style={{ padding: '1.25rem', marginTop: '1rem', width: '100%', fontSize: '1rem' }}
+                    >
+                        {loading ? <Loader2 className="animate-spin" /> : <><Sparkles size={18} /> GENERAR SESIÓN MAESTRA</>}
+                    </button>
                 </motion.div>
 
                 {/* Right Side: Result Output */}
@@ -192,7 +283,7 @@ function Generator() {
                                     <Dumbbell size={40} style={{ opacity: 0.2 }} />
                                 </div>
                                 <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}>Tu sesión aparecerá aquí</h3>
-                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Completa el formulario y deja que la IA haga el trabajo pesado por ti.</p>
+                                <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Completa los datos y la sugerencia de tema para empezar.</p>
                             </motion.div>
                         ) : (
                             <motion.div
@@ -227,7 +318,7 @@ function Generator() {
                                         padding: '0.25rem 0.5rem',
                                         borderRadius: 'var(--radius-sm)'
                                     }}>
-                                        INTELIGENCIA ARTIFICIAL GENERADA
+                                        SESIÓN GENERADA POR IA
                                     </span>
                                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                                         <button onClick={handleCopy} className="btn-icon" title="Copiar">
