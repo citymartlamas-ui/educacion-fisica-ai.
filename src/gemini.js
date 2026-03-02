@@ -4,11 +4,21 @@ const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
 console.log("Gemini API Key loaded:", apiKey ? "Yes (" + apiKey.substring(0, 10) + "...)" : "NO - MISSING!");
 
-const genAI = new GoogleGenerativeAI(apiKey);
+let genAI = null;
+let model = null;
 
-export const model = genAI.getGenerativeModel({
-    model: "gemini-2.0-flash",
-});
+try {
+    if (apiKey) {
+        genAI = new GoogleGenerativeAI(apiKey);
+        model = genAI.getGenerativeModel({
+            model: "gemini-2.0-flash",
+        });
+    }
+} catch (err) {
+    console.error("Gemini Initialization Failed:", err);
+}
+
+export { model };
 
 export const generateLessonPlan = async (prompt) => {
     try {

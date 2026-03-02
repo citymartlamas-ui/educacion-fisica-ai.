@@ -10,7 +10,9 @@ import {
     Dumbbell,
     ChevronRight,
     Trophy,
-    Info
+    Info,
+    Video,
+    ExternalLink
 } from 'lucide-react';
 import { db } from './firebase';
 import { collection, query, getDocs, orderBy } from 'firebase/firestore';
@@ -33,10 +35,11 @@ const GamesPage = ({ onNavigate, user }) => {
             ageRange: '6-12 años',
             duration: '15 min',
             materials: ['Pañuelo', 'Conos'],
-            intensity: 'Alta',
+            intensity: 'High',
             description: 'Un juego clásico de velocidad y reflejos donde dos equipos compiten por atrapar un pañuelo.',
             instructions: 'Se dividen en dos grupos numerados. Al decir un número, el jugador de cada equipo corre al centro...',
-            objectives: 'Desarrollar la velocidad de reacción y la agilidad.'
+            objectives: 'Desarrollar la velocidad de reacción y la agilidad.',
+            videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
         },
         {
             id: '2',
@@ -48,7 +51,8 @@ const GamesPage = ({ onNavigate, user }) => {
             intensity: 'Media',
             description: 'Los alumnos deben cruzar un "río" usando a sus compañeros como apoyo seguro.',
             instructions: 'En grupos de 5, deben avanzar de un punto A a un punto B sin tocar el suelo...',
-            objectives: 'Fomentar el trabajo en equipo y la confianza.'
+            objectives: 'Fomentar el trabajo en equipo y la confianza.',
+            videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
         },
         {
             id: '3',
@@ -60,7 +64,8 @@ const GamesPage = ({ onNavigate, user }) => {
             intensity: 'Media',
             description: 'Un recorrido de obstáculos que desafía la estabilidad y el control postural.',
             instructions: 'Caminar sobre cuerdas en el suelo, saltar aros y mantener el equilibrio en bancos suizos...',
-            objectives: 'Mejorar el equilibrio dinámico y estático.'
+            objectives: 'Mejorar el equilibrio dinámico y estático.',
+            videoUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ'
         }
     ];
 
@@ -247,6 +252,17 @@ const GamesPage = ({ onNavigate, user }) => {
 
                             <div style={{ display: 'flex', gap: '1rem' }}>
                                 <button className="btn btn-primary" style={{ flex: 1 }}>AGREGAR A MI SESIÓN</button>
+                                {selectedGame.videoUrl && (
+                                    <a
+                                        href={selectedGame.videoUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="btn btn-secondary"
+                                        style={{ flex: 1, gap: '0.75rem' }}
+                                    >
+                                        <Video size={18} /> VER VIDEO DEMOSTRATIVO <ExternalLink size={14} />
+                                    </a>
+                                )}
                                 <button className="btn btn-secondary">DESCARTAR</button>
                             </div>
                         </motion.div>

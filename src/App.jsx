@@ -1,19 +1,25 @@
-import React, { useState } from 'react'
+import React, { useState, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-    Dumbbell, Sparkles, BookOpen, LayoutDashboard, ShieldCheck,
-    ChevronRight, ArrowLeft, ClipboardList, Trophy, Target,
-    Users, Zap, Heart, Brain, Calendar, FileText, Star,
-    LogOut, User, CheckCircle2
+    LogOut, User, CheckCircle2, Menu, X, Home,
+    Calendar, Layers, Search, MoreHorizontal,
+    PlusCircle, Bell, History, FilePlus, Table, BarChart,
+    Dumbbell, ClipboardList, ChevronRight, ShieldCheck,
+    Target, Trophy, ArrowLeft, LayoutDashboard, FileText,
+    Sparkles, BookOpen, Star
 } from 'lucide-react'
 import { useAuth } from './AuthContext'
 import LoginPage from './LoginPage'
-import Generator from './Generator'
-import AdminDashboard from './AdminDashboard'
-import GamesPage from './GamesPage'
-import PlanAnualPage from './PlanAnualPage'
-import UnitsPage from './UnitsPage'
-import RubricsPage from './RubricsPage'
+
+// Lazy load large components
+const Generator = React.lazy(() => import('./Generator'))
+const AdminDashboard = React.lazy(() => import('./AdminDashboard'))
+const GamesPage = React.lazy(() => import('./GamesPage'))
+const PlanAnualPage = React.lazy(() => import('./PlanAnualPage'))
+const UnitsPage = React.lazy(() => import('./UnitsPage'))
+const RubricsPage = React.lazy(() => import('./RubricsPage'))
+
+console.log("App.jsx: Modules loaded");
 
 const fadeIn = {
     initial: { opacity: 0, y: 20 },
@@ -21,514 +27,348 @@ const fadeIn = {
     transition: { duration: 0.6 }
 }
 
-const staggerContainer = {
-    animate: {
-        transition: { staggerChildren: 0.1 }
-    }
-}
-
 function App() {
     const { user, loading, logout } = useAuth()
     const [currentPage, setCurrentPage] = useState('home')
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+
+    console.log("App Render - User:", user?.email, "Loading:", loading, "Page:", currentPage);
 
     if (loading) {
         return (
             <div style={{
                 minHeight: '100vh',
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                background: 'var(--color-bg)'
+                background: '#060b18',
+                color: '#00e5ff'
             }}>
-                <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
-                >
-                    <Dumbbell size={40} style={{ color: 'var(--color-primary)' }} />
-                </motion.div>
+                <div style={{ marginBottom: '2rem', animation: 'spin 2s linear infinite' }}>
+                    <Dumbbell size={60} />
+                </div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 700, letterSpacing: '2px' }}>
+                    CARGANDO...
+                </div>
+                <style>{`
+                    @keyframes spin {
+                        from { transform: rotate(0deg); }
+                        to { transform: rotate(360deg); }
+                    }
+                `}</style>
             </div>
         )
     }
 
-    return (
-        <div>
-            {/* Background Glows */}
-            <div className="bg-glow bg-glow-1" />
-            <div className="bg-glow bg-glow-2" />
-            <div className="bg-glow bg-glow-3" />
-
-            {/* Navbar - hidden on login page */}
-            {currentPage !== 'login' && (
-                <nav className="navbar">
-                    <div className="navbar-inner">
-                        <div className="navbar-brand" onClick={() => setCurrentPage('home')}>
-                            <div className="navbar-brand-icon">
-                                <Dumbbell size={22} />
-                            </div>
-                            <div className="navbar-brand-text">
-                                EDUFISICA <span>AI</span>
-                            </div>
-                        </div>
-
-                        <ul className="navbar-links">
-                            <li><a href="#" className={currentPage === 'home' ? 'active' : ''} onClick={() => setCurrentPage('home')}>Inicio</a></li>
-                            <li><a href="#" className={currentPage === 'tools' ? 'active' : ''} onClick={() => setCurrentPage('tools')}>Herramientas</a></li>
-                            {user?.role === 'admin' && (
-                                <li><a href="#" className={currentPage === 'admin' ? 'active' : ''} onClick={() => setCurrentPage('admin')}>Administración</a></li>
-                            )}
-                            <li><a href="#" className={currentPage === 'profile' ? 'active' : ''} onClick={() => setCurrentPage('profile')}>Mi Perfil</a></li>
-                            <li><a href="#" onClick={() => setCurrentPage('home')}>Recursos</a></li>
-                            <li><a href="#" onClick={() => setCurrentPage('home')}>Comunidad</a></li>
-                        </ul>
-
-                        <div className="navbar-actions">
-                            {user ? (
-                                <>
-                                    <div style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '0.5rem',
-                                        padding: '0.4rem 0.75rem',
-                                        background: 'var(--glass-bg)',
-                                        border: '1px solid var(--glass-border)',
-                                        borderRadius: 'var(--radius-full)',
-                                        fontSize: '0.8rem',
-                                        color: 'var(--text-secondary)'
-                                    }}>
-                                        {user.photoURL ? (
-                                            <img src={user.photoURL} alt="" style={{ width: 24, height: 24, borderRadius: '50%' }} />
-                                        ) : (
-                                            <User size={14} />
-                                        )}
-                                        <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                            {user.displayName || user.email}
-                                        </span>
-                                        {user.role === 'admin' && (
-                                            <span style={{
-                                                fontSize: '0.65rem',
-                                                padding: '0.1rem 0.4rem',
-                                                background: 'var(--color-primary)',
-                                                color: 'white',
-                                                borderRadius: 'var(--radius-sm)',
-                                                fontWeight: 800,
-                                                marginLeft: '0.25rem'
-                                            }}>
-                                                ADMIN
-                                            </span>
-                                        )}
-                                    </div>
-                                    <button className="btn-icon btn" onClick={logout} title="Cerrar sesión">
-                                        <LogOut size={16} />
-                                    </button>
-                                </>
-                            ) : (
-                                <>
-                                    <button className="btn btn-secondary" onClick={() => setCurrentPage('login')}>
-                                        Iniciar Sesión
-                                    </button>
-                                    <button className="btn btn-primary" onClick={() => setCurrentPage('login')}>
-                                        Registrarse
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </nav>
-            )}
-
-            {/* Content */}
+    if (!user) {
+        return (
             <AnimatePresence mode="wait">
-                {currentPage === 'home' && <HomePage key="home" onNavigate={setCurrentPage} user={user} />}
-                {currentPage === 'tools' && <ToolsPage key="tools" onNavigate={setCurrentPage} user={user} />}
-                {currentPage === 'generator' && <GeneratorPage key="generator" onNavigate={setCurrentPage} />}
-
-                {currentPage === 'banco' && <GamesPage key="banco" user={user} onNavigate={setCurrentPage} />}
-                {currentPage === 'plan-anual' && <PlanAnualPage key="plan-anual" user={user} onNavigate={setCurrentPage} />}
-                {currentPage === 'unidades' && <UnitsPage key="unidades" user={user} onNavigate={setCurrentPage} />}
-                {currentPage === 'rubricas' && <RubricsPage key="rubricas" user={user} onNavigate={setCurrentPage} />}
-
-                {currentPage === 'calculadora' && (
-                    <UnderConstructionPage
-                        key="calculadora"
-                        title="Calculadora Física"
-                        onNavigate={setCurrentPage}
-                    />
+                {currentPage === 'login' ? (
+                    <LoginPage key="login" onNavigate={setCurrentPage} />
+                ) : (
+                    <SplashPage key="splash" onNavigate={setCurrentPage} />
                 )}
-
-                {currentPage === 'admin' && user?.role === 'admin' && (
-                    <div className="container" style={{ paddingTop: '2rem' }}>
-                        <AdminDashboard key="admin" />
-                    </div>
-                )}
-                {currentPage === 'profile' && <ProfilePage key="profile" user={user} onNavigate={setCurrentPage} />}
-                {currentPage === 'login' && <LoginPage key="login" onNavigate={setCurrentPage} />}
             </AnimatePresence>
+        )
+    }
 
-            {/* Footer */}
-            {currentPage !== 'login' && (
-                <footer className="footer">
-                    <div className="container">
-                        <ul className="footer-links">
-                            <li><a href="#">Términos</a></li>
-                            <li><a href="#">Privacidad</a></li>
-                            <li><a href="#">Contacto</a></li>
-                            <li><a href="#">Soporte</a></li>
-                        </ul>
-                        <p>© 2026 EduFisica AI — Hecho con 💪 para docentes de Educación Física</p>
-                    </div>
-                </footer>
-            )}
+    return (
+        <div style={{ minHeight: '100vh', background: 'var(--color-bg)', color: 'var(--text-primary)' }}>
+            <Suspense fallback={<div className="loading-fallback">Cargando módulo...</div>}>
+                <AnimatePresence mode="wait">
+                    {/* TOP NAV / HEADER */}
+                    <header className="glass" style={{
+                        position: 'sticky',
+                        top: 0,
+                        zIndex: 100,
+                        padding: '1rem',
+                        borderBottom: '1px solid var(--glass-border)'
+                    }}>
+                        <div className="container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div className="navbar-brand" onClick={() => setCurrentPage('home')}>
+                                <div className="navbar-brand-icon">
+                                    <Dumbbell size={22} />
+                                </div>
+                                <div className="navbar-brand-text">
+                                    EDUFISICA <span>AI</span>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.75rem' }}>
+                                <button className="btn-icon" onClick={() => setCurrentPage('mas')}>
+                                    <User size={20} />
+                                </button>
+                                <button className="btn-icon" onClick={() => setIsMobileMenuOpen(true)}>
+                                    <Menu size={20} />
+                                </button>
+                            </div>
+                        </div>
+                    </header>
+
+                    {/* MAIN CONTENT */}
+                    <main style={{ paddingBottom: '6rem' }}>
+                        <AnimatePresence mode="wait">
+                            {currentPage === 'home' && <DashboardPrincipal key="home" user={user} onNavigate={setCurrentPage} />}
+
+                            {currentPage === 'generator' && (
+                                <motion.div key="generator" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                                    <div className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
+                                        <button className="btn btn-secondary" onClick={() => setCurrentPage('planificacion')} style={{ marginBottom: '1.5rem' }}>
+                                            <ArrowLeft size={16} /> Volver
+                                        </button>
+                                        <Generator />
+                                    </div>
+                                </motion.div>
+                            )}
+
+                            {currentPage === 'planificacion' && (
+                                <div className="container" style={{ paddingTop: '2rem' }}>
+                                    <div className="section-header">
+                                        <h2>Módulo de <span className="text-gradient">Planificación</span></h2>
+                                        <p>Gestiona tu año escolar, unidades y sesiones.</p>
+                                    </div>
+                                    <div className="tools-grid">
+                                        <ToolItem icon={<Calendar size={24} />} title="Plan Anual" desc="Programación anual CNEB" onClick={() => setCurrentPage('plan-anual')} />
+                                        <ToolItem icon={<Layers size={24} />} title="Unidades" desc="Unidades didácticas" onClick={() => setCurrentPage('unidades')} />
+                                        <ToolItem icon={<FilePlus size={24} />} title="Sesiones" desc="Generador de sesiones IA" onClick={() => setCurrentPage('generator')} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentPage === 'evaluacion' && (
+                                <div className="container" style={{ paddingTop: '2rem' }}>
+                                    <div className="section-header">
+                                        <h2>Módulo de <span className="text-gradient">Evaluación</span></h2>
+                                        <p>Rúbricas, listas de cotejo y registros.</p>
+                                    </div>
+                                    <div className="tools-grid">
+                                        <ToolItem icon={<Table size={24} />} title="Rúbricas" desc="Crear rúbricas IA" onClick={() => setCurrentPage('rubricas')} />
+                                        <ToolItem icon={<ClipboardList size={24} />} title="Lista de Cotejo" desc="Evaluación rápida" onClick={() => setCurrentPage('home')} />
+                                        <ToolItem icon={<BarChart size={24} />} title="Registros" desc="Seguimiento por alumno" onClick={() => setCurrentPage('home')} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {currentPage === 'admin' && <AdminDashboard key="admin" />}
+                            {currentPage === 'games' && <GamesPage key="games" onNavigate={setCurrentPage} user={user} />}
+                            {currentPage === 'plan-anual' && <PlanAnualPage key="plan-anual" onNavigate={setCurrentPage} user={user} />}
+                            {currentPage === 'unidades' && <UnitsPage key="unidades" onNavigate={setCurrentPage} user={user} />}
+                            {currentPage === 'rubricas' && <RubricsPage key="rubricas" onNavigate={setCurrentPage} user={user} />}
+                            {currentPage === 'mas' && <ConfigPage key="mas" onNavigate={setCurrentPage} user={user} logout={logout} />}
+                        </AnimatePresence>
+                    </main>
+
+                    {/* BOTTOM NAV */}
+                    <nav className="bottom-nav">
+                        <button className={`bottom-nav-item ${currentPage === 'home' ? 'active' : ''}`} onClick={() => setCurrentPage('home')}>
+                            <Home size={22} />
+                            <span>Inicio</span>
+                        </button>
+                        <button className={`bottom-nav-item ${currentPage === 'planificacion' ? 'active' : ''}`} onClick={() => setCurrentPage('planificacion')}>
+                            <Calendar size={22} />
+                            <span>Planes</span>
+                        </button>
+                        <button className={`bottom-nav-item ${currentPage === 'games' ? 'active' : ''}`} onClick={() => setCurrentPage('games')}>
+                            <Dumbbell size={22} />
+                            <span>Actividades</span>
+                        </button>
+                        <button className={`bottom-nav-item ${currentPage === 'evaluacion' ? 'active' : ''}`} onClick={() => setCurrentPage('evaluacion')}>
+                            <ClipboardList size={22} />
+                            <span>Evaluar</span>
+                        </button>
+                        <button className={`bottom-nav-item ${currentPage === 'mas' ? 'active' : ''}`} onClick={() => setCurrentPage('mas')}>
+                            <MoreHorizontal size={22} />
+                            <span>Más</span>
+                        </button>
+                    </nav>
+                </AnimatePresence>
+            </Suspense>
+
+            {/* Mobile Menu Overlay */}
+            <AnimatePresence>
+                {isMobileMenuOpen && (
+                    <motion.div
+                        initial={{ opacity: 0, x: '100%' }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: '100%' }}
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'var(--color-bg)',
+                            zIndex: 1000,
+                            padding: '2rem',
+                            display: 'flex',
+                            flexDirection: 'column'
+                        }}
+                    >
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '2rem' }}>
+                            <button className="btn-icon" onClick={() => setIsMobileMenuOpen(false)}>
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                            <button className="btn btn-secondary w-full" onClick={() => { setCurrentPage('home'); setIsMobileMenuOpen(false); }}>INICIO</button>
+                            <button className="btn btn-secondary w-full" onClick={() => { setCurrentPage('planificacion'); setIsMobileMenuOpen(false); }}>PLANIFICACIÓN</button>
+                            <button className="btn btn-secondary w-full" onClick={() => { setCurrentPage('evaluacion'); setIsMobileMenuOpen(false); }}>EVALUACIÓN</button>
+                            <button className="btn btn-secondary w-full" onClick={() => { setCurrentPage('games'); setIsMobileMenuOpen(false); }}>BANCO DE JUEGOS</button>
+                            {user?.role === 'admin' && (
+                                <button className="btn btn-primary w-full" onClick={() => { setCurrentPage('admin'); setIsMobileMenuOpen(false); }}>ADMINISTRACIÓN</button>
+                            )}
+                            <button className="btn btn-danger w-full" onClick={() => { logout(); setIsMobileMenuOpen(false); }}>CERRAR SESIÓN</button>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }
 
 /* ============================================
-   HOME PAGE
+   STYLING BLOCKS
    ============================================ */
-function HomePage({ onNavigate, user }) {
+
+function SplashPage({ onNavigate }) {
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-
-            {/* Hero */}
-            <section className="hero">
-                <div className="container">
-                    <motion.div {...fadeIn}>
-                        <div className="hero-badge">
-                            <Sparkles size={14} /> POTENCIADO CON INTELIGENCIA ARTIFICIAL
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="hero">
+            <div className="container">
+                <motion.div {...fadeIn}>
+                    <div style={{ marginBottom: '2rem', display: 'flex', justifyContent: 'center' }}>
+                        <div className="navbar-brand-icon" style={{ width: 80, height: 80 }}>
+                            <Dumbbell size={40} />
                         </div>
-                        <h1>
-                            TU ASISTENTE DE<br />
-                            <span className="text-gradient">EDUCACIÓN FÍSICA</span>
-                        </h1>
-                        <p className="hero-subtitle">
-                            La plataforma que todo docente nuevo necesita. Genera sesiones, gestiona materiales
-                            y planifica tu año escolar en minutos, no en horas.
-                        </p>
-                        <div className="hero-buttons">
-                            <button className="btn btn-primary btn-lg" onClick={() => onNavigate(user ? 'tools' : 'login')}>
-                                {user ? 'IR A MIS HERRAMIENTAS' : 'EMPEZAR GRATIS'} <ChevronRight size={20} />
-                            </button>
-                            <button className="btn btn-secondary btn-lg">
-                                VER DEMOSTRACIÓN
-                            </button>
-                        </div>
-                    </motion.div>
-
-                    <motion.div
-                        className="hero-stats"
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.4 }}
-                    >
-                        <div className="hero-stat">
-                            <div className="hero-stat-value">12+</div>
-                            <div className="hero-stat-label">Herramientas IA</div>
-                        </div>
-                        <div className="hero-stat">
-                            <div className="hero-stat-value">500+</div>
-                            <div className="hero-stat-label">Juegos Motores</div>
-                        </div>
-                        <div className="hero-stat">
-                            <div className="hero-stat-value">100%</div>
-                            <div className="hero-stat-label">Currículo Nacional</div>
-                        </div>
-                    </motion.div>
-                </div>
-            </section>
-
-            {/* Features */}
-            <section className="section">
-                <div className="container">
-                    <div className="section-header">
-                        <div className="overline">¿Por qué EduFisica AI?</div>
-                        <h2>Todo lo que necesitas en <span className="text-gradient">un solo lugar</span></h2>
-                        <p>Diseñada para docentes de Educación Física que quieren ahorrar tiempo y ofrecer clases increíbles.</p>
                     </div>
-
-                    <motion.div
-                        className="features-grid"
-                        variants={staggerContainer}
-                        initial="initial"
-                        whileInView="animate"
-                        viewport={{ once: true }}
-                    >
-                        <FeatureCard icon={<Brain size={24} />} title="IA Especializada en EF" desc="No es un generador genérico. Nuestra IA entiende de motricidad, juegos y pedagogía deportiva." color="primary" />
-                        <FeatureCard icon={<ShieldCheck size={24} />} title="Gestiona tu Material" desc="Dile qué tienes (3 balones, 5 conos) y la IA adaptará las sesiones a tu realidad." color="secondary" />
-                        <FeatureCard icon={<Calendar size={24} />} title="Plan Anual Automático" desc="Genera tu programación anual alineada al currículo nacional en un clic." color="accent" />
-                        <FeatureCard icon={<Target size={24} />} title="Rúbricas Inteligentes" desc="Evalúa habilidades motrices (equilibrio, coordinación, velocidad) con criterios objetivos." color="primary" />
-                        <FeatureCard icon={<Heart size={24} />} title="Primeros Auxilios" desc="Accede a un módulo de consulta rápida para lesiones comunes en clase de EF." color="secondary" />
-                        <FeatureCard icon={<Trophy size={24} />} title="Pruebas Físicas" desc="Calculadora automática de Test de Cooper, IMC y pruebas de velocidad." color="accent" />
-                    </motion.div>
-                </div>
-            </section>
-
-            {/* CTA */}
-            <section className="section" style={{ paddingBottom: '6rem' }}>
-                <div className="container text-center">
-                    <motion.div
-                        className="glass-static"
-                        style={{ padding: '3.5rem 2rem', borderRadius: 'var(--radius-xl)' }}
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        whileInView={{ opacity: 1, scale: 1 }}
-                        viewport={{ once: true }}
-                    >
-                        <h2 style={{ marginBottom: '1rem' }}>
-                            ¿Listo para revolucionar tus <span className="text-gradient">clases de EF</span>?
-                        </h2>
-                        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem', maxWidth: '500px', margin: '0 auto 2rem' }}>
-                            Únete a la comunidad de docentes que ya están usando IA para planificar mejor.
-                        </p>
-                        <button className="btn btn-primary btn-lg" onClick={() => onNavigate(user ? 'tools' : 'login')}>
-                            {user ? 'IR A MIS HERRAMIENTAS' : 'CREAR MI CUENTA GRATIS'} <Zap size={18} />
+                    <h1>
+                        EDUFISICA <span className="text-gradient">AI</span>
+                    </h1>
+                    <p className="hero-subtitle" style={{ fontSize: '1.4rem', fontWeight: 600 }}>
+                        “Planifica, enseña y evalúa con respaldo del CNEB”
+                    </p>
+                    <div className="hero-buttons" style={{ flexDirection: 'column', gap: '1rem', maxWidth: '300px', margin: '2rem auto 0' }}>
+                        <button className="btn btn-primary btn-lg w-full" onClick={() => onNavigate('login')}>
+                            INGRESAR
                         </button>
-                    </motion.div>
-                </div>
-            </section>
-        </motion.div>
-    )
-}
-
-/* ============================================
-   TOOLS PAGE
-   ============================================ */
-function ToolsPage({ onNavigate, user }) {
-    const tools = [
-        { num: '01', title: 'Generador de Sesiones', desc: 'Crea sesiones de EF completas: calentamiento, desarrollo y vuelta a la calma.', icon: <ClipboardList size={18} />, tag: 'Más Popular' },
-        { num: '02', title: 'Plan Anual', desc: 'Genera tu programación anual alineada al currículo nacional.', icon: <Calendar size={18} />, tag: 'IA Avanzada' },
-        { num: '03', title: 'Unidades Didácticas', desc: 'Diseña unidades completas con competencias y desempeños.', icon: <BookOpen size={18} />, tag: 'Nuevo' },
-        { num: '04', title: 'Rúbricas de Evaluación', desc: 'Crea rúbricas específicas para habilidades motrices.', icon: <FileText size={18} />, tag: 'IA Avanzada' },
-        { num: '05', title: 'Banco de Juegos', desc: 'Más de 500 juegos motores organizados por edad y objetivo.', icon: <Trophy size={18} />, tag: 'Recurso' },
-        { num: '06', title: 'Calculadora Física', desc: 'Test de Cooper, IMC, resistencia y más. Resultados al instante.', icon: <Target size={18} />, tag: 'Herramienta' },
-    ]
-
-    return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <section className="section">
-                <div className="container">
-                    {user && (
-                        <motion.div
-                            initial={{ opacity: 0, y: -10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            style={{
-                                padding: '1rem 1.5rem',
-                                background: 'var(--color-primary-glow)',
-                                border: '1px solid rgba(0, 229, 255, 0.2)',
-                                borderRadius: 'var(--radius-md)',
-                                marginBottom: '2rem',
-                                fontSize: '0.9rem',
-                                color: 'var(--text-primary)',
-                                display: 'flex',
-                                justifyContent: 'space-between',
-                                alignItems: 'center'
-                            }}
-                        >
-                            <div>
-                                👋 ¡Hola, <strong>{user.displayName || user.email}</strong>! Selecciona una herramienta para comenzar.
-                            </div>
-                            {user.role === 'admin' && (
-                                <span style={{
-                                    fontSize: '0.75rem',
-                                    padding: '0.3rem 0.6rem',
-                                    background: 'var(--color-accent)',
-                                    color: 'white',
-                                    borderRadius: 'var(--radius-md)',
-                                    fontWeight: 700
-                                }}>
-                                    MODO ADMINISTRADOR ACTIVADO
-                                </span>
-                            )}
-                        </motion.div>
-                    )}
-
-                    <div className="section-header">
-                        <div className="overline">Herramientas</div>
-                        <h2>Tus <span className="text-gradient">Superpoderes</span> Docentes</h2>
-                        <p>Cada herramienta está diseñada específicamente para el área de Educación Física.</p>
+                        <button className="btn btn-secondary btn-lg w-full" onClick={() => onNavigate('login')}>
+                            CREAR CUENTA
+                        </button>
                     </div>
-
-                    <motion.div
-                        className="tools-grid"
-                        variants={staggerContainer}
-                        initial="initial"
-                        animate="animate"
-                    >
-                        {tools.map((tool, i) => (
-                            <motion.div
-                                key={i}
-                                variants={fadeIn}
-                                className="glass tool-card"
-                                onClick={() => {
-                                    if (!user) {
-                                        onNavigate('login');
-                                    } else if (tool.num === '01') {
-                                        onNavigate('generator');
-                                    } else if (tool.num === '02') {
-                                        onNavigate('plan-anual');
-                                    } else if (tool.num === '03') {
-                                        onNavigate('unidades');
-                                    } else if (tool.num === '04') {
-                                        onNavigate('rubricas');
-                                    } else if (tool.num === '05') {
-                                        onNavigate('banco');
-                                    } else if (tool.num === '06') {
-                                        onNavigate('calculadora');
-                                    }
-                                }}
-                            >
-                                <div className="tool-card-header">
-                                    <span className="tool-card-number">{tool.num}</span>
-                                    {tool.icon}
-                                </div>
-                                <div className="tool-card-title">{tool.title}</div>
-                                <div className="tool-card-desc">{tool.desc}</div>
-                                <div className="tool-card-tag">
-                                    <Star size={12} /> {tool.tag}
-                                </div>
-                            </motion.div>
-                        ))}
-                    </motion.div>
-                </div>
-            </section>
+                </motion.div>
+            </div>
         </motion.div>
     )
 }
 
-/* ============================================
-   GENERATOR PAGE
-   ============================================ */
-function GeneratorPage({ onNavigate }) {
+function DashboardPrincipal({ user, onNavigate }) {
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="container" style={{ paddingTop: '2rem', paddingBottom: '2rem' }}>
-                <button className="btn btn-secondary" onClick={() => onNavigate('tools')} style={{ marginBottom: '1.5rem' }}>
-                    <ArrowLeft size={16} /> Volver a Herramientas
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="container" style={{ paddingTop: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+                <div>
+                    <h2 style={{ fontSize: '1.5rem' }}>¡Hola, {user.displayName?.split(' ')[0] || 'Docente'}! 👋</h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Hoy es un buen día para enseñar.</p>
+                </div>
+                <button className="btn-icon" style={{ background: 'var(--glass-bg)' }}>
+                    <Bell size={20} />
                 </button>
-                <Generator />
             </div>
-        </motion.div>
-    )
-}
 
-/* ============================================
-   FEATURE CARD COMPONENT
-   ============================================ */
-function FeatureCard({ icon, title, desc, color }) {
-    return (
-        <motion.div variants={fadeIn} className="glass feature-card">
-            <div className={`feature-card-icon ${color}`}>{icon}</div>
-            <h3>{title}</h3>
-            <p>{desc}</p>
-        </motion.div>
-    )
-}
-
-/* ============================================
-   PROFILE PAGE
-   ============================================ */
-function ProfilePage({ user, onNavigate }) {
-    if (!user) return null;
-
-    return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="container" style={{ paddingTop: '3rem', paddingBottom: '3rem' }}>
-            <div className="glass" style={{ maxWidth: '600px', margin: '0 auto', padding: '2.5rem' }}>
-                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-                    <div style={{
-                        width: '100px',
-                        height: '100px',
-                        borderRadius: '50%',
-                        background: 'var(--color-primary-glow)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        margin: '0 auto 1.5rem',
-                        fontSize: '3rem',
-                        border: '2px solid var(--color-primary)'
-                    }}>
-                        {user.photoURL ? <img src={user.photoURL} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%' }} /> : user.displayName?.[0] || user.email?.[0]}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+                <div className="glass" style={{ padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: 'var(--color-primary)' }}>
+                        <History size={18} />
+                        <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>PRÓXIMAS SESIONES</h4>
                     </div>
-                    <h2>{user.displayName || 'Usuario'}</h2>
-                    <p style={{ color: 'var(--text-secondary)' }}>{user.email}</p>
-                </div>
-
-                <div style={{ display: 'grid', gap: '1.5rem' }}>
-                    <div className="glass-static" style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>ROL DE USUARIO</div>
-                            <div style={{ fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: user.role === 'admin' ? 'var(--color-primary)' : 'var(--text-primary)' }}>
-                                {user.role === 'admin' ? 'Administrador' : 'Docente'}
-                            </div>
-                        </div>
-                        {user.role === 'admin' ? <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} /> : <User size={24} style={{ color: 'var(--text-secondary)' }} />}
-                    </div>
-
-                    <div className="glass-static" style={{ padding: '1.25rem' }}>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>ESTADÍSTICAS</div>
-                        <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem' }}>
-                            <div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{user.materials?.length || 0}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Materiales</div>
-                            </div>
-                            <div>
-                                <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{user.savedSessions?.length || 0}</div>
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sesiones</div>
-                            </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        <div className="glass-static" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
+                            <div style={{ fontWeight: 600 }}>Velocidad y Reacción</div>
+                            <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>3ro Secundaria • Mañana</div>
                         </div>
                     </div>
-
-                    {user.role === 'admin' && (
-                        <button className="btn btn-primary" onClick={() => onNavigate('admin')} style={{ width: '100%' }}>
-                            <LayoutDashboard size={18} /> IR AL PANEL DE CONTROL
-                        </button>
-                    )}
                 </div>
+
+                <div className="glass" style={{ padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem', color: 'var(--color-secondary)' }}>
+                        <Layers size={18} />
+                        <h4 style={{ fontSize: '0.9rem', fontWeight: 700 }}>UNIDADES ACTIVAS</h4>
+                    </div>
+                    <div className="glass-static" style={{ padding: '0.75rem', fontSize: '0.85rem' }}>
+                        <div style={{ fontWeight: 600 }}>Unidad 1: Mi cuerpo</div>
+                        <div style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>3 de 5 sesiones</div>
+                    </div>
+                </div>
+            </div>
+
+            <h4 style={{ marginBottom: '1.25rem', fontSize: '1rem', fontWeight: 700 }}>ACCIONES RÁPIDAS</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+                <QuickButton icon={<FilePlus size={20} />} label="Nueva Sesión" color="primary" onClick={() => onNavigate('generator')} />
+                <QuickButton icon={<PlusCircle size={20} />} label="Nueva Unidad" color="secondary" onClick={() => onNavigate('planificacion')} />
+                <QuickButton icon={<Star size={20} />} label="Evaluar" color="accent" onClick={() => onNavigate('evaluacion')} />
+                <QuickButton icon={<Search size={20} />} label="Buscar Juego" color="primary" onClick={() => onNavigate('games')} />
             </div>
         </motion.div>
     )
 }
 
-/* ============================================
-   UNDER CONSTRUCTION PAGE
-   ============================================ */
-function UnderConstructionPage({ title, onNavigate }) {
+function QuickButton({ icon, label, color, onClick }) {
     return (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="container" style={{ paddingTop: '3rem', paddingBottom: '6rem', textAlign: 'center' }}>
-            <button className="btn btn-secondary" onClick={() => onNavigate('tools')} style={{ marginBottom: '3rem' }}>
-                <ArrowLeft size={16} /> Volver a Herramientas
-            </button>
+        <button className="glass quick-button" onClick={onClick}>
+            <div className={`quick-icon ${color}`}>{icon}</div>
+            <span>{label}</span>
+        </button>
+    )
+}
 
-            <div className="glass" style={{ padding: '4rem 2rem', maxWidth: '800px', margin: '0 auto' }}>
-                <div style={{
-                    width: '80px',
-                    height: '80px',
-                    background: 'var(--color-primary-glow)',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    margin: '0 auto 2rem',
-                    color: 'var(--color-primary)'
-                }}>
-                    <LayoutDashboard size={40} />
-                </div>
-                <h1 style={{ marginBottom: '1rem' }}>{title}</h1>
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '2.5rem', fontSize: '1.1rem' }}>
-                    Estamos construyendo esta herramienta para que tengas la mejor experiencia posible.<br />
-                    ¡Pronto estará disponible para potenciar tus clases!
-                </p>
-                <div className="features-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', textAlign: 'left' }}>
-                    <div className="glass-static" style={{ padding: '1.5rem' }}>
-                        <div style={{ color: 'var(--color-primary)', marginBottom: '0.5rem' }}><CheckCircle2 size={20} /></div>
-                        <h4 style={{ marginBottom: '0.5rem' }}>Diseño Premium</h4>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Interfaz optimizada para el flujo de trabajo docente.</p>
+function ToolItem({ icon, title, desc, onClick }) {
+    return (
+        <div className="glass tool-card" onClick={onClick} style={{ padding: '1.5rem' }}>
+            <div className="tool-card-icon primary">{icon}</div>
+            <h3 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{title}</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{desc}</p>
+        </div>
+    )
+}
+
+function ConfigPage({ onNavigate, user, logout }) {
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="container" style={{ paddingTop: '2rem' }}>
+            <div className="section-header">
+                <h2>Configuración y <span className="text-gradient">Más</span></h2>
+            </div>
+            <div style={{ display: 'grid', gap: '1rem' }}>
+                <div className="glass" style={{ padding: '1rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <div style={{ width: 50, height: 50, borderRadius: '50%', background: 'var(--color-primary-glow)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <User size={24} />
                     </div>
-                    <div className="glass-static" style={{ padding: '1.5rem' }}>
-                        <div style={{ color: 'var(--color-secondary)', marginBottom: '0.5rem' }}><Sparkles size={20} /></div>
-                        <h4 style={{ marginBottom: '0.5rem' }}>IA Especializada</h4>
-                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Modelos entrenados en pedagogía deportiva.</p>
+                    <div>
+                        <div style={{ fontWeight: 700 }}>{user?.displayName || 'Docente'}</div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{user?.email}</div>
                     </div>
                 </div>
+                <div className="glass" style={{ padding: '1.25rem' }}>
+                    <h4 style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>SISTEMA</h4>
+                    <div style={{ display: 'grid', gap: '1rem' }}>
+                        <MenuNavItem icon={<BookOpen size={18} />} label="Marco Normativo CNEB" onClick={() => { }} />
+                        {user?.role === 'admin' && (
+                            <MenuNavItem icon={<ShieldCheck size={18} />} label="Panel Administrador" onClick={() => onNavigate('admin')} color="var(--color-primary)" />
+                        )}
+                    </div>
+                </div>
+                <button className="btn btn-danger w-full" onClick={logout} style={{ marginTop: '1rem' }}>
+                    <LogOut size={16} /> CERRAR SESIÓN
+                </button>
             </div>
         </motion.div>
+    )
+}
+
+function MenuNavItem({ icon, label, onClick, color }) {
+    return (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer', padding: '0.5rem 0' }} onClick={onClick}>
+            <div style={{ color: color || 'var(--text-secondary)' }}>{icon}</div>
+            <div style={{ fontSize: '0.95rem', color: color || 'var(--text-primary)' }}>{label}</div>
+            <ChevronRight size={16} style={{ marginLeft: 'auto', opacity: 0.5 }} />
+        </div>
     )
 }
 

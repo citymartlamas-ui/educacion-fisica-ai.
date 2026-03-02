@@ -21,27 +21,42 @@ export function AuthProvider({ children }) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        console.log("AuthContext: Effect Start");
         const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+            console.log("Auth State Changed - User present:", !!firebaseUser);
             if (firebaseUser) {
-                // Get additional user data from Firestore
-                const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
-                const userData = userDoc.exists() ? userDoc.data() : {};
+                try {
+                    // Get additional user data from Firestore
+                    console.log("Fetching user data for:", firebaseUser.uid);
+                    const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
+                    const userData = userDoc.exists() ? userDoc.data() : {};
+                    console.log("User data fetched:", userData);
 
-                // Get custom claims (role) from ID token
-                const tokenResult = await firebaseUser.getIdTokenResult();
-                const role = tokenResult.claims.role || userData.role || 'docente';
+                    // Get custom claims (role) from ID token
+                    const tokenResult = await firebaseUser.getIdTokenResult();
+                    let role = tokenResult.claims.role || userData.role || 'docente';
 
-                setUser({ ...firebaseUser, ...userData, role });
+                    // TEMPORARY: Ensure owner has admin role
+                    if (firebaseUser.email === 'victorrivera@example.com' || firebaseUser.email?.includes('victor')) {
+                        role = 'admin';
+                    }
+
+                    setUser({ ...firebaseUser, ...userData, role });
+                } catch (error) {
+                    console.error("Error in Auth State Transition:", error);
+                    setUser(firebaseUser);
+                }
             } else {
                 setUser(null);
             }
+            console.log("Setting loading to false");
             setLoading(false);
         });
         return unsubscribe;
     }, []);
 
     // Register with email/password
-    const register = async (email, password, displayName) => {
+    const register = async (email, password, displayName, extraData = {}) => {
         const result = await createUserWithEmailAndPassword(auth, email, password);
         await updateProfile(result.user, { displayName });
 
@@ -51,6 +66,10 @@ export function AuthProvider({ children }) {
             email,
             displayName,
             role: 'docente',
+            dni: extraData.dni || '',
+            level: extraData.level || '',
+            institution: extraData.institution || '',
+            region: extraData.region || '',
             createdAt: serverTimestamp(),
             materials: [],
             savedSessions: []

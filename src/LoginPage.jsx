@@ -12,7 +12,11 @@ function LoginPage({ onNavigate }) {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
-        password: ''
+        password: '',
+        dni: '',
+        level: '',
+        institution: '',
+        region: ''
     });
 
     const handleSubmit = async (e) => {
@@ -22,7 +26,12 @@ function LoginPage({ onNavigate }) {
 
         try {
             if (isRegister) {
-                await register(formData.email, formData.password, formData.name);
+                await register(formData.email, formData.password, formData.name, {
+                    dni: formData.dni,
+                    level: formData.level,
+                    institution: formData.institution,
+                    region: formData.region
+                });
             } else {
                 await login(formData.email, formData.password);
             }
@@ -146,27 +155,38 @@ function LoginPage({ onNavigate }) {
                     {/* Form */}
                     <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {isRegister && (
-                            <div className="form-group">
-                                <label className="form-label">Nombre completo</label>
-                                <div style={{ position: 'relative' }}>
-                                    <User size={16} style={{
-                                        position: 'absolute',
-                                        left: '0.85rem',
-                                        top: '50%',
-                                        transform: 'translateY(-50%)',
-                                        color: 'var(--text-muted)'
-                                    }} />
-                                    <input
-                                        type="text"
-                                        className="form-input"
-                                        placeholder="Tu nombre"
-                                        style={{ paddingLeft: '2.5rem' }}
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        required
-                                    />
+                            <>
+                                <div className="form-group">
+                                    <label className="form-label">Nombre completo</label>
+                                    <div style={{ position: 'relative' }}>
+                                        <User size={16} style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                        <input type="text" className="form-input" placeholder="Tu nombre" style={{ paddingLeft: '2.5rem' }} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                                    </div>
                                 </div>
-                            </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                    <div className="form-group">
+                                        <label className="form-label">DNI (Opcional)</label>
+                                        <input type="text" className="form-input" placeholder="Número DNI" value={formData.dni} onChange={(e) => setFormData({ ...formData, dni: e.target.value })} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Nivel</label>
+                                        <select className="form-input" value={formData.level} onChange={(e) => setFormData({ ...formData, level: e.target.value })} required style={{ background: 'var(--color-bg)' }}>
+                                            <option value="">Selección...</option>
+                                            <option value="inicial">Inicial</option>
+                                            <option value="primaria">Primaria</option>
+                                            <option value="secundaria">Secundaria</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Institución Educativa</label>
+                                    <input type="text" className="form-input" placeholder="Nombre del colegio" value={formData.institution} onChange={(e) => setFormData({ ...formData, institution: e.target.value })} required />
+                                </div>
+                                <div className="form-group">
+                                    <label className="form-label">Región</label>
+                                    <input type="text" className="form-input" placeholder="Ej. Lima, Cusco" value={formData.region} onChange={(e) => setFormData({ ...formData, region: e.target.value })} required />
+                                </div>
+                            </>
                         )}
 
                         <div className="form-group">
