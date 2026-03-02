@@ -1,5 +1,7 @@
 {
-  "projects": {},
+  "projects": {
+    "default": "edufisica-ai-v1-63820"
+  },
   "targets": {},
   "etags": {}
 }

@@ -4,11 +4,16 @@ import {
     Dumbbell, Sparkles, BookOpen, LayoutDashboard, ShieldCheck,
     ChevronRight, ArrowLeft, ClipboardList, Trophy, Target,
     Users, Zap, Heart, Brain, Calendar, FileText, Star,
-    LogOut, User
+    LogOut, User, CheckCircle2
 } from 'lucide-react'
 import { useAuth } from './AuthContext'
 import LoginPage from './LoginPage'
 import Generator from './Generator'
+import AdminDashboard from './AdminDashboard'
+import GamesPage from './GamesPage'
+import PlanAnualPage from './PlanAnualPage'
+import UnitsPage from './UnitsPage'
+import RubricsPage from './RubricsPage'
 
 const fadeIn = {
     initial: { opacity: 0, y: 20 },
@@ -68,6 +73,10 @@ function App() {
                         <ul className="navbar-links">
                             <li><a href="#" className={currentPage === 'home' ? 'active' : ''} onClick={() => setCurrentPage('home')}>Inicio</a></li>
                             <li><a href="#" className={currentPage === 'tools' ? 'active' : ''} onClick={() => setCurrentPage('tools')}>Herramientas</a></li>
+                            {user?.role === 'admin' && (
+                                <li><a href="#" className={currentPage === 'admin' ? 'active' : ''} onClick={() => setCurrentPage('admin')}>Administración</a></li>
+                            )}
+                            <li><a href="#" className={currentPage === 'profile' ? 'active' : ''} onClick={() => setCurrentPage('profile')}>Mi Perfil</a></li>
                             <li><a href="#" onClick={() => setCurrentPage('home')}>Recursos</a></li>
                             <li><a href="#" onClick={() => setCurrentPage('home')}>Comunidad</a></li>
                         </ul>
@@ -94,6 +103,19 @@ function App() {
                                         <span style={{ maxWidth: '100px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                             {user.displayName || user.email}
                                         </span>
+                                        {user.role === 'admin' && (
+                                            <span style={{
+                                                fontSize: '0.65rem',
+                                                padding: '0.1rem 0.4rem',
+                                                background: 'var(--color-primary)',
+                                                color: 'white',
+                                                borderRadius: 'var(--radius-sm)',
+                                                fontWeight: 800,
+                                                marginLeft: '0.25rem'
+                                            }}>
+                                                ADMIN
+                                            </span>
+                                        )}
                                     </div>
                                     <button className="btn-icon btn" onClick={logout} title="Cerrar sesión">
                                         <LogOut size={16} />
@@ -119,6 +141,26 @@ function App() {
                 {currentPage === 'home' && <HomePage key="home" onNavigate={setCurrentPage} user={user} />}
                 {currentPage === 'tools' && <ToolsPage key="tools" onNavigate={setCurrentPage} user={user} />}
                 {currentPage === 'generator' && <GeneratorPage key="generator" onNavigate={setCurrentPage} />}
+
+                {currentPage === 'banco' && <GamesPage key="banco" user={user} onNavigate={setCurrentPage} />}
+                {currentPage === 'plan-anual' && <PlanAnualPage key="plan-anual" user={user} onNavigate={setCurrentPage} />}
+                {currentPage === 'unidades' && <UnitsPage key="unidades" user={user} onNavigate={setCurrentPage} />}
+                {currentPage === 'rubricas' && <RubricsPage key="rubricas" user={user} onNavigate={setCurrentPage} />}
+
+                {currentPage === 'calculadora' && (
+                    <UnderConstructionPage
+                        key="calculadora"
+                        title="Calculadora Física"
+                        onNavigate={setCurrentPage}
+                    />
+                )}
+
+                {currentPage === 'admin' && user?.role === 'admin' && (
+                    <div className="container" style={{ paddingTop: '2rem' }}>
+                        <AdminDashboard key="admin" />
+                    </div>
+                )}
+                {currentPage === 'profile' && <ProfilePage key="profile" user={user} onNavigate={setCurrentPage} />}
                 {currentPage === 'login' && <LoginPage key="login" onNavigate={setCurrentPage} />}
             </AnimatePresence>
 
@@ -274,10 +316,27 @@ function ToolsPage({ onNavigate, user }) {
                                 borderRadius: 'var(--radius-md)',
                                 marginBottom: '2rem',
                                 fontSize: '0.9rem',
-                                color: 'var(--text-primary)'
+                                color: 'var(--text-primary)',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
                             }}
                         >
-                            👋 ¡Hola, <strong>{user.displayName || user.email}</strong>! Selecciona una herramienta para comenzar.
+                            <div>
+                                👋 ¡Hola, <strong>{user.displayName || user.email}</strong>! Selecciona una herramienta para comenzar.
+                            </div>
+                            {user.role === 'admin' && (
+                                <span style={{
+                                    fontSize: '0.75rem',
+                                    padding: '0.3rem 0.6rem',
+                                    background: 'var(--color-accent)',
+                                    color: 'white',
+                                    borderRadius: 'var(--radius-md)',
+                                    fontWeight: 700
+                                }}>
+                                    MODO ADMINISTRADOR ACTIVADO
+                                </span>
+                            )}
                         </motion.div>
                     )}
 
@@ -303,6 +362,16 @@ function ToolsPage({ onNavigate, user }) {
                                         onNavigate('login');
                                     } else if (tool.num === '01') {
                                         onNavigate('generator');
+                                    } else if (tool.num === '02') {
+                                        onNavigate('plan-anual');
+                                    } else if (tool.num === '03') {
+                                        onNavigate('unidades');
+                                    } else if (tool.num === '04') {
+                                        onNavigate('rubricas');
+                                    } else if (tool.num === '05') {
+                                        onNavigate('banco');
+                                    } else if (tool.num === '06') {
+                                        onNavigate('calculadora');
                                     }
                                 }}
                             >
@@ -349,6 +418,116 @@ function FeatureCard({ icon, title, desc, color }) {
             <div className={`feature-card-icon ${color}`}>{icon}</div>
             <h3>{title}</h3>
             <p>{desc}</p>
+        </motion.div>
+    )
+}
+
+/* ============================================
+   PROFILE PAGE
+   ============================================ */
+function ProfilePage({ user, onNavigate }) {
+    if (!user) return null;
+
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="container" style={{ paddingTop: '3rem', paddingBottom: '3rem' }}>
+            <div className="glass" style={{ maxWidth: '600px', margin: '0 auto', padding: '2.5rem' }}>
+                <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+                    <div style={{
+                        width: '100px',
+                        height: '100px',
+                        borderRadius: '50%',
+                        background: 'var(--color-primary-glow)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        margin: '0 auto 1.5rem',
+                        fontSize: '3rem',
+                        border: '2px solid var(--color-primary)'
+                    }}>
+                        {user.photoURL ? <img src={user.photoURL} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%' }} /> : user.displayName?.[0] || user.email?.[0]}
+                    </div>
+                    <h2>{user.displayName || 'Usuario'}</h2>
+                    <p style={{ color: 'var(--text-secondary)' }}>{user.email}</p>
+                </div>
+
+                <div style={{ display: 'grid', gap: '1.5rem' }}>
+                    <div className="glass-static" style={{ padding: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>ROL DE USUARIO</div>
+                            <div style={{ fontWeight: 700, letterSpacing: '1px', textTransform: 'uppercase', color: user.role === 'admin' ? 'var(--color-primary)' : 'var(--text-primary)' }}>
+                                {user.role === 'admin' ? 'Administrador' : 'Docente'}
+                            </div>
+                        </div>
+                        {user.role === 'admin' ? <ShieldCheck size={24} style={{ color: 'var(--color-primary)' }} /> : <User size={24} style={{ color: 'var(--text-secondary)' }} />}
+                    </div>
+
+                    <div className="glass-static" style={{ padding: '1.25rem' }}>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>ESTADÍSTICAS</div>
+                        <div style={{ display: 'flex', gap: '2rem', marginTop: '1rem' }}>
+                            <div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{user.materials?.length || 0}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Materiales</div>
+                            </div>
+                            <div>
+                                <div style={{ fontSize: '1.5rem', fontWeight: 800 }}>{user.savedSessions?.length || 0}</div>
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Sesiones</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {user.role === 'admin' && (
+                        <button className="btn btn-primary" onClick={() => onNavigate('admin')} style={{ width: '100%' }}>
+                            <LayoutDashboard size={18} /> IR AL PANEL DE CONTROL
+                        </button>
+                    )}
+                </div>
+            </div>
+        </motion.div>
+    )
+}
+
+/* ============================================
+   UNDER CONSTRUCTION PAGE
+   ============================================ */
+function UnderConstructionPage({ title, onNavigate }) {
+    return (
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="container" style={{ paddingTop: '3rem', paddingBottom: '6rem', textAlign: 'center' }}>
+            <button className="btn btn-secondary" onClick={() => onNavigate('tools')} style={{ marginBottom: '3rem' }}>
+                <ArrowLeft size={16} /> Volver a Herramientas
+            </button>
+
+            <div className="glass" style={{ padding: '4rem 2rem', maxWidth: '800px', margin: '0 auto' }}>
+                <div style={{
+                    width: '80px',
+                    height: '80px',
+                    background: 'var(--color-primary-glow)',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 2rem',
+                    color: 'var(--color-primary)'
+                }}>
+                    <LayoutDashboard size={40} />
+                </div>
+                <h1 style={{ marginBottom: '1rem' }}>{title}</h1>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '2.5rem', fontSize: '1.1rem' }}>
+                    Estamos construyendo esta herramienta para que tengas la mejor experiencia posible.<br />
+                    ¡Pronto estará disponible para potenciar tus clases!
+                </p>
+                <div className="features-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', textAlign: 'left' }}>
+                    <div className="glass-static" style={{ padding: '1.5rem' }}>
+                        <div style={{ color: 'var(--color-primary)', marginBottom: '0.5rem' }}><CheckCircle2 size={20} /></div>
+                        <h4 style={{ marginBottom: '0.5rem' }}>Diseño Premium</h4>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Interfaz optimizada para el flujo de trabajo docente.</p>
+                    </div>
+                    <div className="glass-static" style={{ padding: '1.5rem' }}>
+                        <div style={{ color: 'var(--color-secondary)', marginBottom: '0.5rem' }}><Sparkles size={20} /></div>
+                        <h4 style={{ marginBottom: '0.5rem' }}>IA Especializada</h4>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Modelos entrenados en pedagogía deportiva.</p>
+                    </div>
+                </div>
+            </div>
         </motion.div>
     )
 }

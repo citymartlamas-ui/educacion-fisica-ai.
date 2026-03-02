@@ -26,7 +26,12 @@ export function AuthProvider({ children }) {
                 // Get additional user data from Firestore
                 const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
                 const userData = userDoc.exists() ? userDoc.data() : {};
-                setUser({ ...firebaseUser, ...userData });
+
+                // Get custom claims (role) from ID token
+                const tokenResult = await firebaseUser.getIdTokenResult();
+                const role = tokenResult.claims.role || userData.role || 'docente';
+
+                setUser({ ...firebaseUser, ...userData, role });
             } else {
                 setUser(null);
             }
