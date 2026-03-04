@@ -27,6 +27,7 @@ const PlanAnualPage = ({ onNavigate, user }) => {
     const [isSuggestingTutoria, setIsSuggestingTutoria] = useState(false);
     const [isSuggestingEvaluacion, setIsSuggestingEvaluacion] = useState(false);
     const [isSuggestingRecursos, setIsSuggestingRecursos] = useState(false);
+    const [generatingUnitTitles, setGeneratingUnitTitles] = useState({}); // Tracking loading state per unit ID
 
     const [formData, setFormData] = useState({
         modalidad: 'EBR - Educación Básica Regular',
@@ -132,6 +133,25 @@ const PlanAnualPage = ({ onNavigate, user }) => {
             console.error("Error AI Recursos:", e);
         }
         setIsSuggestingRecursos(false);
+    };
+
+    const handleSuggestUnitTitle = async (unitId, index, periodoNum) => {
+        setGeneratingUnitTitles(prev => ({ ...prev, [unitId]: true }));
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        try {
+            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const prompt = `Sugiere UN SOLO título atractivo, formativo y relacionado al entorno real para una unidad de Educación Física. 
+Nivel: ${formData.nivel}, Grado: ${formData.grado}.
+Esta es la unidad #${index + 1} que corresponde al periodo: ${formData.divisionAno.slice(0, -1)} ${periodoNum}.
+Solo devuelve el texto del título (máximo 12 palabras), sin comillas y sin punto final.`;
+            const result = await model.generateContent(prompt);
+            updateUnidad(unitId, 'titulo', result.response.text().trim());
+        } catch (e) {
+            console.error(`Error AI Unidad ${unitId}:`, e);
+            alert("No se pudo conectar con la IA para esta unidad.");
+        }
+        setGeneratingUnitTitles(prev => ({ ...prev, [unitId]: false }));
     };
 
     const handleNext = () => {
@@ -377,10 +397,12 @@ const PlanAnualPage = ({ onNavigate, user }) => {
                                                         <label style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>Título de la Unidad</label>
                                                         <button
                                                             className="btn btn-secondary"
+                                                            onClick={() => handleSuggestUnitTitle(u.id, index, periodoNum)}
+                                                            disabled={generatingUnitTitles[u.id]}
                                                             style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem', gap: '0.3rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: 'none' }}
                                                             title="Sugerir Título con IA"
                                                         >
-                                                            <Sparkles size={10} /> Sugerir
+                                                            {generatingUnitTitles[u.id] ? <Loader2 size={10} className="spin" /> : <Sparkles size={10} />} Sugerir
                                                         </button>
                                                     </div>
                                                     <input
