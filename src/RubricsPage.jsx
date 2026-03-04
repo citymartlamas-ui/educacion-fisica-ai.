@@ -207,12 +207,74 @@ Solo devuelve el título, sin comillas ni texto adicional. Ejemplo: "Juegos Coop
             alumnosArray = formData.listaAlumnos.split('\n').filter(a => a.trim());
         }
 
+        const downloadAsWord = () => {
+            if (!rubricResult) return;
+
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Rúbrica de Educación Física</title><style>table {border-collapse: collapse; width: 100%;} th, td {border: 1px solid black; padding: 8px; text-align: left;}</style></head><body>";
+            const footer = "</body></html>";
+
+            let htmlSource = `<h1>${rubricResult.titulo}</h1>`;
+
+            // Build the Rubric Criteria Table
+            htmlSource += `<h2>Criterios de Evaluación</h2>`;
+            htmlSource += `<table><thead><tr><th width="20%">Criterio</th><th width="20%">AD (Destacado)</th><th width="20%">A (Esperado)</th><th width="20%">B (En Proceso)</th><th width="20%">C (En Inicio)</th></tr></thead><tbody>`;
+            rubricResult.criterios.forEach(crit => {
+                htmlSource += `<tr>
+                    <td><strong>${crit.nombre}</strong></td>
+                    <td>${crit.descripciones.AD}</td>
+                    <td>${crit.descripciones.A}</td>
+                    <td>${crit.descripciones.B}</td>
+                    <td>${crit.descripciones.C}</td>
+                </tr>`;
+            });
+            htmlSource += `</tbody></table><br/>`;
+
+            // Build the Registration Sheet
+            if (alumnosArray.length > 0) {
+                htmlSource += `<h2>Ficha de Registro: ${formData.nombreLista || 'Lista Personalizada'}</h2>`;
+                htmlSource += `<table><thead><tr><th rowspan="2" align="center">N°</th><th rowspan="2">Apellidos y Nombres</th>`;
+
+                rubricResult.criterios.forEach(crit => {
+                    htmlSource += `<th colspan="4" align="center">${crit.nombre}</th>`;
+                });
+                htmlSource += `<th rowspan="2" align="center">Calificación Final</th></tr><tr>`;
+
+                rubricResult.criterios.forEach(() => {
+                    htmlSource += `<th>AD</th><th>A</th><th>B</th><th>C</th>`;
+                });
+                htmlSource += `</tr></thead><tbody>`;
+
+                alumnosArray.forEach((alumno, idx) => {
+                    htmlSource += `<tr>
+                        <td align="center">${idx + 1}</td>
+                        <td>${alumno}</td>`;
+                    rubricResult.criterios.forEach(() => {
+                        htmlSource += `<td align="center"> </td><td align="center"> </td><td align="center"> </td><td align="center"> </td>`;
+                    });
+                    htmlSource += `<td align="center"> </td></tr>`;
+                });
+                htmlSource += `</tbody></table>`;
+            }
+
+            const sourceHTML = header + htmlSource + footer;
+            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+            const fileDownload = document.createElement("a");
+            document.body.appendChild(fileDownload);
+            fileDownload.href = source;
+            fileDownload.download = `Rubrica_${formData.grado || 'Educacion_Fisica'}.doc`;
+            fileDownload.click();
+            document.body.removeChild(fileDownload);
+        };
+
         return (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ background: 'var(--color-surface)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--glass-border)', marginTop: '2rem', overflowX: 'auto' }}>
                 <h2 style={{ marginBottom: '1rem', color: 'var(--color-primary)' }}>{rubricResult.titulo}</h2>
                 <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
                     <button className="btn btn-secondary" onClick={() => { setIsGenerating(false); setCurrentStep(0); setRubricResult(null); }}>
                         Volver a la Lista
+                    </button>
+                    <button className="btn btn-secondary" onClick={downloadAsWord}>
+                        <FileText size={16} style={{ marginRight: '0.5rem' }} /> Descargar en Word
                     </button>
                     <button className="btn btn-primary" onClick={() => window.print()}>
                         <Download size={16} style={{ marginRight: '0.5rem' }} /> Guardar / Imprimir PDF
