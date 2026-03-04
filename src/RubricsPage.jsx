@@ -84,9 +84,9 @@ Solo devuelve el título, sin comillas ni texto adicional. Ejemplo: "Juegos Coop
         setIsSuggestingTopic(false);
     };
 
-    // Funciones en lugar de componentes para evitar perder el foco
-    const Step1Config = () => (
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+    // Funciones que retornan JSX directamente (sin ser componentes para evitar perder foco)
+    const renderStep1Config = () => (
+        <motion.div key="s1" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <h3 style={{ marginBottom: '1.5rem' }}>Configuración de la Rúbrica</h3>
             <div className="form-group">
                 <label className="form-label">Nivel Educativo</label>
@@ -152,15 +152,19 @@ Solo devuelve el título, sin comillas ni texto adicional. Ejemplo: "Juegos Coop
         </motion.div>
     );
 
-    const Step2Alumnos = () => (
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+    const renderStep2Alumnos = () => (
+        <motion.div key="s2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
             <h3 style={{ marginBottom: '1.5rem' }}>Alumnos a Evaluar</h3>
             <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
                 Selecciona una lista que hayas guardado previamente al crear sesiones, o ingresa nombres manualmente.
             </p>
             <div className="form-group">
                 <label className="form-label">Listas Guardadas</label>
-                <select className="form-select" onChange={handleSelectList}>
+                <select
+                    className="form-select"
+                    onChange={handleSelectList}
+                    value={savedLists.find(l => l.name === formData.nombreLista)?.id || ''}
+                >
                     <option value="">-- Ingresar manual --</option>
                     {savedLists.map((list) => (
                         <option key={list.id} value={list.id}>{list.name}</option>
@@ -180,8 +184,8 @@ Solo devuelve el título, sin comillas ni texto adicional. Ejemplo: "Juegos Coop
         </motion.div>
     );
 
-    const Step3Generar = () => (
-        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center" style={{ padding: '3rem 1rem' }}>
+    const renderStep3Generar = () => (
+        <motion.div key="s3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="text-center" style={{ padding: '3rem 1rem' }}>
             <div style={{ width: '80px', height: '80px', background: 'var(--color-primary-glow)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 2rem', color: 'var(--color-primary)' }}>
                 <Target size={40} />
             </div>
@@ -398,9 +402,9 @@ Solo devuelve el título, sin comillas ni texto adicional. Ejemplo: "Juegos Coop
                     {!rubricResult && (
                         <div className="glass" style={{ padding: '2.5rem', borderRadius: 'var(--radius-xl)', minHeight: '400px', display: 'flex', flexDirection: 'column' }}>
                             <AnimatePresence mode="wait">
-                                {currentStep === 0 && <Step1Config key="s1" />}
-                                {currentStep === 1 && <Step2Alumnos key="s2" />}
-                                {currentStep === 2 && <Step3Generar key="s3" />}
+                                {currentStep === 0 && renderStep1Config()}
+                                {currentStep === 1 && renderStep2Alumnos()}
+                                {currentStep === 2 && renderStep3Generar()}
                             </AnimatePresence>
 
                             <div style={{ marginTop: 'auto', paddingTop: '2rem', display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--glass-border)' }}>
