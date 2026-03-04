@@ -50,14 +50,14 @@ const RubricsPage = ({ onNavigate, user }) => {
 
     const handleGenerate = async () => {
         setLoading(true);
-        setCurrentStep(3); // Mostrar el panel de generando
+        setCurrentStep(2); // Mostrar el panel de generando (que es el paso 3 visible pero el índice 2)
         const res = await generateRubric(formData);
         if (res.success) {
             setRubricResult(res.data);
             setRubrics([{ id: Date.now().toString(), title: formData.tema, category: formData.competencia, level: formData.nivel, date: new Date().toISOString().split('T')[0] }, ...rubrics]);
         } else {
             alert("Error al generar la rúbrica: " + res.error);
-            setCurrentStep(2);
+            setCurrentStep(1); // Volver al paso de agregar alumnos si falla
         }
         setLoading(false);
     };
