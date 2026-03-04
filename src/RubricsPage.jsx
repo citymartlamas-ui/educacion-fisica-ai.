@@ -13,7 +13,6 @@ const RubricsPage = ({ onNavigate, user }) => {
 
     const [savedLists, setSavedLists] = useState([]);
 
-    // Formulario de parámetros
     const [formData, setFormData] = useState({
         nivel: '',
         grado: '',
@@ -23,6 +22,7 @@ const RubricsPage = ({ onNavigate, user }) => {
         listaAlumnos: '',
         nombreLista: ''
     });
+    const [isSuggestingTopic, setIsSuggestingTopic] = useState(false);
 
     const [rubrics, setRubrics] = useState([
         { id: '1', title: 'Evaluación de Salto y Caída', category: 'Salto', level: 'Primaria', date: '2026-02-10' },
@@ -62,6 +62,28 @@ const RubricsPage = ({ onNavigate, user }) => {
         setLoading(false);
     };
 
+    const handleSuggestTopic = async () => {
+        if (!formData.nivel || !formData.grado || !formData.competencia) {
+            alert("Selecciona Nivel, Grado y Competencia primero para sugerir un tema.");
+            return;
+        }
+        setIsSuggestingTopic(true);
+        // Usaremos el mismo helper de gemini, pero le pediremos un tema
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        try {
+            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const prompt = `Actúa como un profesor experto de educación física. 
+Sugiere UN SOLO título atractivo y descriptivo para una unidad didáctica de educación física para el nivel ${formData.nivel}, ${formData.grado}, trabajando la competencia: "${formData.competencia}". 
+Solo devuelve el título, sin comillas ni texto adicional. Ejemplo: "Juegos Cooperativos y Trabajo en Equipo"`;
+            const result = await model.generateContent(prompt);
+            setFormData({ ...formData, tema: result.response.text().trim() });
+        } catch (e) {
+            console.error("Error sugiriendo tema:", e);
+        }
+        setIsSuggestingTopic(false);
+    };
+
     // Funciones en lugar de componentes para evitar perder el foco
     const Step1Config = () => (
         <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
@@ -78,13 +100,37 @@ const RubricsPage = ({ onNavigate, user }) => {
             {formData.nivel && (
                 <div className="form-group">
                     <label className="form-label">Grado / Edad</label>
-                    <input type="text" className="form-input" placeholder="Ej: 3ro de Secundaria / 5 años" value={formData.grado} onChange={e => setFormData({ ...formData, grado: e.target.value })} />
+                    <select className="form-select" value={formData.grado} onChange={e => setFormData({ ...formData, grado: e.target.value })}>
+                        <option value="">Selecciona grado / edad...</option>
+                        {formData.nivel === 'Inicial' && (
+                            <>
+                                <option value="3 años">3 años</option>
+                                <option value="4 años">4 años</option>
+                                <option value="5 años">5 años</option>
+                            </>
+                        )}
+                        {formData.nivel === 'Primaria' && (
+                            <>
+                                <option value="1er Grado">1er Grado</option>
+                                <option value="2do Grado">2do Grado</option>
+                                <option value="3er Grado">3er Grado</option>
+                                <option value="4to Grado">4to Grado</option>
+                                <option value="5to Grado">5to Grado</option>
+                                <option value="6to Grado">6to Grado</option>
+                            </>
+                        )}
+                        {formData.nivel === 'Secundaria' && (
+                            <>
+                                <option value="1er Año">1er Año</option>
+                                <option value="2do Año">2do Año</option>
+                                <option value="3er Año">3er Año</option>
+                                <option value="4to Año">4to Año</option>
+                                <option value="5to Año">5to Año</option>
+                            </>
+                        )}
+                    </select>
                 </div>
             )}
-            <div className="form-group">
-                <label className="form-label">Tópico o Título de la Unidad</label>
-                <input type="text" className="form-input" placeholder="Ej: Mini-Atletismo: Velocidad y Relevos" value={formData.tema} onChange={e => setFormData({ ...formData, tema: e.target.value })} />
-            </div>
             <div className="form-group">
                 <label className="form-label">Competencia a Evaluar</label>
                 <select className="form-select" value={formData.competencia} onChange={e => setFormData({ ...formData, competencia: e.target.value })}>
@@ -93,6 +139,15 @@ const RubricsPage = ({ onNavigate, user }) => {
                     <option value="Asume una vida saludable">Asume una vida saludable</option>
                     <option value="Interactúa a través de sus habilidades sociomotrices">Interactúa a través de sus habilidades sociomotrices</option>
                 </select>
+            </div>
+            <div className="form-group">
+                <label className="form-label">Tópico o Título de la Unidad</label>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input type="text" className="form-input" style={{ flex: 1 }} placeholder="Ej: Juegos Tradicionales y Cooperativos" value={formData.tema} onChange={e => setFormData({ ...formData, tema: e.target.value })} />
+                    <button className="btn btn-secondary" onClick={handleSuggestTopic} disabled={isSuggestingTopic} title="Sugerir Tópico con IA">
+                        {isSuggestingTopic ? <Star size={18} className="spin" /> : <Star size={18} />}
+                    </button>
+                </div>
             </div>
         </motion.div>
     );
