@@ -259,28 +259,43 @@ Solo devuelve el título, sin comillas ni texto adicional. Ejemplo: "Juegos Coop
                     <div style={{ marginTop: '3rem' }}>
                         <h3 style={{ marginBottom: '1rem' }}>Ficha de Registro: {formData.nombreLista || 'Lista Personalizada'}</h3>
                         <div style={{ overflowX: 'auto' }}>
-                            <table className="admin-table">
+                            <table className="admin-table text-center">
                                 <thead>
                                     <tr>
-                                        <th>N°</th>
-                                        <th>Apellidos y Nombres</th>
+                                        <th rowSpan={2} style={{ verticalAlign: 'middle', width: '50px' }}>N°</th>
+                                        <th rowSpan={2} style={{ verticalAlign: 'middle', textAlign: 'left', minWidth: '200px' }}>Apellidos y Nombres</th>
                                         {rubricResult.criterios.map((crit, idx) => (
-                                            <th key={idx} style={{ textAlign: 'center', fontSize: '0.8rem' }}>C{idx + 1}</th>
+                                            <th colSpan={4} key={idx} style={{ textAlign: 'center', fontSize: '0.85rem', borderLeft: '2px solid rgba(255,255,255,0.1)' }}>
+                                                {crit.nombre}
+                                            </th>
                                         ))}
-                                        <th>Calificación Final</th>
+                                        <th rowSpan={2} style={{ verticalAlign: 'middle', borderLeft: '2px solid rgba(255,255,255,0.1)' }}>Calificación Final</th>
+                                    </tr>
+                                    <tr>
+                                        {rubricResult.criterios.map((_, idx) => (
+                                            <React.Fragment key={idx}>
+                                                <th style={{ fontSize: '0.75rem', padding: '0.5rem', borderLeft: '2px solid rgba(255,255,255,0.1)' }}>AD</th>
+                                                <th style={{ fontSize: '0.75rem', padding: '0.5rem' }}>A</th>
+                                                <th style={{ fontSize: '0.75rem', padding: '0.5rem' }}>B</th>
+                                                <th style={{ fontSize: '0.75rem', padding: '0.5rem' }}>C</th>
+                                            </React.Fragment>
+                                        ))}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {alumnosArray.map((alumno, idx) => (
                                         <tr key={idx}>
-                                            <td style={{ width: '50px', textAlign: 'center' }}>{idx + 1}</td>
-                                            <td>{alumno}</td>
+                                            <td style={{ textAlign: 'center' }}>{idx + 1}</td>
+                                            <td style={{ textAlign: 'left', fontWeight: 500 }}>{alumno}</td>
                                             {rubricResult.criterios.map((_, cIdx) => (
-                                                <td key={cIdx} style={{ textAlign: 'center' }}>
-                                                    <span style={{ opacity: 0.2 }}>__</span>
-                                                </td>
+                                                <React.Fragment key={cIdx}>
+                                                    <td style={{ textAlign: 'center', borderLeft: '2px solid rgba(255,255,255,0.1)' }}><div style={{ width: '16px', height: '16px', border: '1px solid var(--glass-border)', borderRadius: '4px', margin: '0 auto' }}></div></td>
+                                                    <td style={{ textAlign: 'center' }}><div style={{ width: '16px', height: '16px', border: '1px solid var(--glass-border)', borderRadius: '4px', margin: '0 auto' }}></div></td>
+                                                    <td style={{ textAlign: 'center' }}><div style={{ width: '16px', height: '16px', border: '1px solid var(--glass-border)', borderRadius: '4px', margin: '0 auto' }}></div></td>
+                                                    <td style={{ textAlign: 'center' }}><div style={{ width: '16px', height: '16px', border: '1px solid var(--glass-border)', borderRadius: '4px', margin: '0 auto' }}></div></td>
+                                                </React.Fragment>
                                             ))}
-                                            <td style={{ textAlign: 'center' }}><span style={{ opacity: 0.2 }}>__</span></td>
+                                            <td style={{ textAlign: 'center', borderLeft: '2px solid rgba(255,255,255,0.1)' }}><span style={{ opacity: 0.2 }}>__</span></td>
                                         </tr>
                                     ))}
                                 </tbody>
