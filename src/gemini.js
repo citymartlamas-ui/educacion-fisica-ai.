@@ -311,3 +311,52 @@ IMPORTANTE:
         return { success: false, error: error.message };
     }
 };
+
+export const generateRubric = async (formData) => {
+    const prompt = `Eres un docente experto de Educación Física en Perú. Genera una RÚBRICA DE EVALUACIÓN analítica y detallada.
+
+DATOS DE LA RÚBRICA:
+- Nivel: ${formData.nivel}
+- Grado: ${formData.grado}
+- Unidad/Tema: ${formData.tema}
+- Competencia principal: ${formData.competencia}
+- Capacidad priorizada: ${formData.capacidad || 'La más pertinente para el tema'}
+
+Instrucciones:
+1. Crea de 3 a 5 criterios de evaluación (indicadores) específicos para el tema y grado.
+2. Cada criterio debe tener 4 niveles de logro:
+   - AD (Logro Destacado): Supera lo esperado.
+   - A (Logro Esperado): Cumple lo esperado.
+   - B (En Proceso): Está cerca de cumplirlo.
+   - C (En Inicio): Muestra dificultades.
+3. Las descripciones deben ser observables, medibles y redactadas en tercera persona del singular (ej. "Realiza...", "Demuestra...").
+
+RESPONDE ÚNICAMENTE con un JSON válido con esta estructura exacta:
+{
+    "titulo": "Rúbrica de Evaluación: ${formData.tema}",
+    "criterios": [
+        {
+            "nombre": "Nombre del Criterio 1",
+            "descripciones": {
+                "AD": "Descripción para Logro Destacado",
+                "A": "Descripción para Logro Esperado",
+                "B": "Descripción para En Proceso",
+                "C": "Descripción para En Inicio"
+            }
+        }
+    ]
+}
+DEVUELVE SOLO EL JSON, sin ningún texto adicional antes o después.`;
+
+    try {
+        const result = await model.generateContent(prompt);
+        const response = await result.response;
+        let text = response.text();
+        text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        const parsed = JSON.parse(text);
+        return { success: true, data: parsed };
+    } catch (error) {
+        console.error("GEMINI RUBRIC ERROR:", error.message);
+        return { success: false, error: error.message };
+    }
+};
