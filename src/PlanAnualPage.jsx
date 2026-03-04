@@ -22,6 +22,11 @@ const PlanAnualPage = ({ onNavigate, user }) => {
     const [currentStep, setCurrentStep] = useState(0);
     const [generating, setGenerating] = useState(false);
     const [result, setResult] = useState('');
+    const [isSuggestingJustification, setIsSuggestingJustification] = useState(false);
+    const [isSuggestingPerfil, setIsSuggestingPerfil] = useState(false);
+    const [isSuggestingTutoria, setIsSuggestingTutoria] = useState(false);
+    const [isSuggestingEvaluacion, setIsSuggestingEvaluacion] = useState(false);
+    const [isSuggestingRecursos, setIsSuggestingRecursos] = useState(false);
 
     const [formData, setFormData] = useState({
         modalidad: 'EBR - Educación Básica Regular',
@@ -53,6 +58,81 @@ const PlanAnualPage = ({ onNavigate, user }) => {
         { id: '1', title: 'Planización Anual 2026 - Primaria', level: '1ero a 6to Primaria', lastModified: '2026-02-28', status: 'En Progreso' },
         { id: '2', title: 'Programación Curricular - Secundaria', level: '1ero a 5to Secundaria', lastModified: '2026-01-15', status: 'Completado' },
     ]);
+
+    const handleSuggestJustification = async () => {
+        setIsSuggestingJustification(true);
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        try {
+            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const prompt = `Actúa como experto en pedagogía. Redacta una justificación profesional y motivadora (máx 2 párrafos) sobre la importancia de la Educación Física escolar para alumnos de ${formData.nivel}. Muestra por qué es vital para su desarrollo integral en el año lectivo. No devuelvas comillas ni formato markdown extra.`;
+            const result = await model.generateContent(prompt);
+            setFormData({ ...formData, justificacion: result.response.text().trim() });
+        } catch (e) {
+            console.error("Error AI Justificación:", e);
+        }
+        setIsSuggestingJustification(false);
+    };
+
+    const handleSuggestPerfil = async () => {
+        setIsSuggestingPerfil(true);
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        try {
+            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const prompt = `Actúa como especialista en Currículo Nacional de Educación Básica (Perú). Redacta en un párrafo máximo de 4 líneas cómo el área de Educación Física contribuye al Perfil de Egreso del estudiante de ${formData.nivel}. No devuelvas comillas ni formato markdown.`;
+            const result = await model.generateContent(prompt);
+            setFormData({ ...formData, perfilEgreso: result.response.text().trim() });
+        } catch (e) {
+            console.error("Error AI Perfil:", e);
+        }
+        setIsSuggestingPerfil(false);
+    };
+
+    const handleSuggestTutoria = async () => {
+        setIsSuggestingTutoria(true);
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        try {
+            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const prompt = `Actúa como especialista pedagógico en tutoría (TOE) en Perú. Redacta de forma breve (1-2 párrafos) las estrategias generales de tutoría que un profesor de Educación Física debe aplicar para estudiantes de ${formData.nivel}. No devuelvas comillas ni markdown.`;
+            const result = await model.generateContent(prompt);
+            setFormData({ ...formData, actividadesTutoria: result.response.text().trim() });
+        } catch (e) {
+            console.error("Error AI Tutoría:", e);
+        }
+        setIsSuggestingTutoria(false);
+    };
+
+    const handleSuggestEvaluacion = async () => {
+        setIsSuggestingEvaluacion(true);
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        try {
+            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const prompt = `Actúa como especialista en evaluación formativa. Redacta de forma breve (1-2 párrafos) cómo se evaluará a los estudiantes de Educación Física a lo largo del año académico (Formativa, Sumativa, Instrumentos) en el nivel de ${formData.nivel}. No devuelvas comillas ni markdown.`;
+            const result = await model.generateContent(prompt);
+            setFormData({ ...formData, evaluacion: result.response.text().trim() });
+        } catch (e) {
+            console.error("Error AI Evaluación:", e);
+        }
+        setIsSuggestingEvaluacion(false);
+    };
+
+    const handleSuggestRecursos = async () => {
+        setIsSuggestingRecursos(true);
+        const { GoogleGenerativeAI } = await import('@google/generative-ai');
+        try {
+            const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+            const prompt = `Enumera en un párrafo fluido los recursos y materiales deportivos (estructurados y no estructurados) así como espacios físicos que se usarán en el año escolar para Educación Física nivel ${formData.nivel}. No devuelvas comillas ni viñetas.`;
+            const result = await model.generateContent(prompt);
+            setFormData({ ...formData, recursos: result.response.text().trim() });
+        } catch (e) {
+            console.error("Error AI Recursos:", e);
+        }
+        setIsSuggestingRecursos(false);
+    };
 
     const handleNext = () => {
         if (currentStep < STEPS.length - 1) setCurrentStep(currentStep + 1);
@@ -221,8 +301,13 @@ const PlanAnualPage = ({ onNavigate, user }) => {
             <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <label className="form-label" style={{ marginBottom: 0 }}>Justificación del Área</label>
-                    <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                        <Sparkles size={12} /> Sugerir con IA
+                    <button
+                        className="btn btn-secondary"
+                        onClick={handleSuggestJustification}
+                        disabled={isSuggestingJustification}
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}
+                    >
+                        {isSuggestingJustification ? <Loader2 size={12} className="spin" /> : <Sparkles size={12} />} Sugerir con IA
                     </button>
                 </div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Explica la importancia de la Educación Física para este grupo en este año escolar.</p>
@@ -232,8 +317,13 @@ const PlanAnualPage = ({ onNavigate, user }) => {
             <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <label className="form-label" style={{ marginBottom: 0 }}>Perfil de Egreso (Vinculación)</label>
-                    <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                        <Sparkles size={12} /> Sugerir con IA
+                    <button
+                        className="btn btn-secondary"
+                        onClick={handleSuggestPerfil}
+                        disabled={isSuggestingPerfil}
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}
+                    >
+                        {isSuggestingPerfil ? <Loader2 size={12} className="spin" /> : <Sparkles size={12} />} Sugerir con IA
                     </button>
                 </div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>¿Cómo aporta el área este año a los rasgos del perfil de egreso?</p>
@@ -412,8 +502,13 @@ const PlanAnualPage = ({ onNavigate, user }) => {
             <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <label className="form-label" style={{ marginBottom: 0 }}>Actividades y Estrategias del Docente</label>
-                    <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                        <Sparkles size={12} /> Sugerir con IA
+                    <button
+                        className="btn btn-secondary"
+                        onClick={handleSuggestTutoria}
+                        disabled={isSuggestingTutoria}
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}
+                    >
+                        {isSuggestingTutoria ? <Loader2 size={12} className="spin" /> : <Sparkles size={12} />} Sugerir con IA
                     </button>
                 </div>
                 <textarea className="form-textarea" placeholder="Narra las estrategias generales de tutoría..." value={formData.actividadesTutoria} onChange={e => setFormData({ ...formData, actividadesTutoria: e.target.value })} style={{ minHeight: '100px' }} />
@@ -426,8 +521,13 @@ const PlanAnualPage = ({ onNavigate, user }) => {
             <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <label className="form-label" style={{ marginBottom: 0 }}>Lineamientos de Evaluación</label>
-                    <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                        <Sparkles size={12} /> Sugerir con IA
+                    <button
+                        className="btn btn-secondary"
+                        onClick={handleSuggestEvaluacion}
+                        disabled={isSuggestingEvaluacion}
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}
+                    >
+                        {isSuggestingEvaluacion ? <Loader2 size={12} className="spin" /> : <Sparkles size={12} />} Sugerir con IA
                     </button>
                 </div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Establece cómo se evaluará a los estudiantes a lo largo del año (Formativa, Sumativa, Instrumentos).</p>
@@ -437,8 +537,13 @@ const PlanAnualPage = ({ onNavigate, user }) => {
             <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
                     <label className="form-label" style={{ marginBottom: 0 }}>Recursos y Materiales Generales</label>
-                    <button className="btn btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                        <Sparkles size={12} /> Sugerir con IA
+                    <button
+                        className="btn btn-secondary"
+                        onClick={handleSuggestRecursos}
+                        disabled={isSuggestingRecursos}
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.75rem', gap: '0.5rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: '1px solid rgba(59, 130, 246, 0.2)' }}
+                    >
+                        {isSuggestingRecursos ? <Loader2 size={12} className="spin" /> : <Sparkles size={12} />} Sugerir con IA
                     </button>
                 </div>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>¿Qué implementos usarás primordialmente en el año?</p>
