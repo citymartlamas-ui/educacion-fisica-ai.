@@ -281,46 +281,48 @@ Solo devuelve el título, sin comillas ni texto adicional. Ejemplo: "Juegos Coop
                     </button>
                 </div>
 
-                <table className="admin-table" style={{ marginBottom: '3rem' }}>
-                    <thead>
-                        <tr>
-                            <th style={{ width: '25%' }}>Criterio</th>
-                            <th>Niveles de Logro (AD - C)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {rubricResult.criterios.map((crit, idx) => (
-                            <tr key={idx}>
-                                <td style={{ fontWeight: 'bold' }}>{crit.nombre}</td>
-                                <td>
-                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '10px' }}>
-                                        <div style={{ background: 'rgba(34, 197, 94, 0.1)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
-                                            <div style={{ fontWeight: 'bold', color: '#22c55e', marginBottom: '5px' }}>AD (Destacado)</div>
-                                            <div style={{ fontSize: '0.85rem' }}>{crit.descripciones.AD}</div>
-                                        </div>
-                                        <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
-                                            <div style={{ fontWeight: 'bold', color: '#3b82f6', marginBottom: '5px' }}>A (Esperado)</div>
-                                            <div style={{ fontSize: '0.85rem' }}>{crit.descripciones.A}</div>
-                                        </div>
-                                        <div style={{ background: 'rgba(234, 179, 8, 0.1)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
-                                            <div style={{ fontWeight: 'bold', color: '#eab308', marginBottom: '5px' }}>B (En Proceso)</div>
-                                            <div style={{ fontSize: '0.85rem' }}>{crit.descripciones.B}</div>
-                                        </div>
-                                        <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
-                                            <div style={{ fontWeight: 'bold', color: '#ef4444', marginBottom: '5px' }}>C (En Inicio)</div>
-                                            <div style={{ fontSize: '0.85rem' }}>{crit.descripciones.C}</div>
-                                        </div>
-                                    </div>
-                                </td>
+                <div className="admin-table-wrapper">
+                    <table className="admin-table" style={{ marginBottom: '0' }}>
+                        <thead>
+                            <tr>
+                                <th style={{ width: '25%' }}>Criterio</th>
+                                <th>Niveles de Logro (AD - C)</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {rubricResult.criterios.map((crit, idx) => (
+                                <tr key={idx}>
+                                    <td style={{ fontWeight: 'bold' }}>{crit.nombre}</td>
+                                    <td>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
+                                            <div style={{ background: 'rgba(34, 197, 94, 0.1)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(34, 197, 94, 0.2)' }}>
+                                                <div style={{ fontWeight: 'bold', color: '#22c55e', marginBottom: '5px' }}>AD (Destacado)</div>
+                                                <div style={{ fontSize: '0.85rem' }}>{crit.descripciones.AD}</div>
+                                            </div>
+                                            <div style={{ background: 'rgba(59, 130, 246, 0.1)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(59, 130, 246, 0.2)' }}>
+                                                <div style={{ fontWeight: 'bold', color: '#3b82f6', marginBottom: '5px' }}>A (Esperado)</div>
+                                                <div style={{ fontSize: '0.85rem' }}>{crit.descripciones.A}</div>
+                                            </div>
+                                            <div style={{ background: 'rgba(234, 179, 8, 0.1)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(234, 179, 8, 0.2)' }}>
+                                                <div style={{ fontWeight: 'bold', color: '#eab308', marginBottom: '5px' }}>B (En Proceso)</div>
+                                                <div style={{ fontSize: '0.85rem' }}>{crit.descripciones.B}</div>
+                                            </div>
+                                            <div style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+                                                <div style={{ fontWeight: 'bold', color: '#ef4444', marginBottom: '5px' }}>C (En Inicio)</div>
+                                                <div style={{ fontSize: '0.85rem' }}>{crit.descripciones.C}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
 
                 {alumnosArray.length > 0 && (
                     <div style={{ marginTop: '3rem' }}>
                         <h3 style={{ marginBottom: '1rem' }}>Ficha de Registro: {formData.nombreLista || 'Lista Personalizada'}</h3>
-                        <div style={{ overflowX: 'auto' }}>
+                        <div className="admin-table-wrapper">
                             <table className="admin-table text-center">
                                 <thead>
                                     <tr>

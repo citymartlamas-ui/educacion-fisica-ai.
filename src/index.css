@@ -624,6 +624,58 @@ h3 {
 }
 
 /* ============================================
+   RESPONSIVE GRIDS & UTILITIES
+   ============================================ */
+.form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .form-grid-2 {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* ============================================
+   TABLES
+   ============================================ */
+.admin-table-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 2rem;
+  border-radius: var(--radius-md);
+  /* Optional shadow for tables */
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 600px; /* Ensures scrolling on mobile if content is wide */
+}
+
+.admin-table th {
+  text-align: left;
+  padding: 1rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-table td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: top;
+}
+
+/* ============================================
    BACKGROUND EFFECTS
    ============================================ */
 .bg-glow {

@@ -197,6 +197,31 @@ Solo devuelve el texto del título (máximo 12 palabras), sin comillas y sin pun
         }));
     };
 
+    const downloadAsWord = () => {
+        if (!result) return;
+        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Plan Anual</title></head><body>";
+        const footer = "</body></html>";
+        let htmlSource = result
+            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+            .replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>')
+            .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
+            .replace(/\*(.*)\*/gim, '<em>$1</em>')
+            .replace(/\n\n/gim, '<p></p>')
+            .replace(/\n/gim, '<br />');
+        htmlSource = htmlSource.replace(/\|(.+)\|/gim, '<tr><td>$1</td></tr>');
+        htmlSource = htmlSource.replace(/<\/tr><br \/><tr>/gim, '</tr><tr>');
+        const sourceHTML = header + htmlSource + footer;
+        const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+        const fileDownload = document.createElement("a");
+        document.body.appendChild(fileDownload);
+        fileDownload.href = source;
+        fileDownload.download = `Plan_Anual_Educacion_Fisica_${formData.grado}.doc`;
+        fileDownload.click();
+        document.body.removeChild(fileDownload);
+    };
+
     const handleGenerate = async () => {
         setGenerating(true);
         const prompt = `Actúa como un planificador experto del Ministerio de Educación de Perú. Genera el PLAN ANUAL DE EDUCACIÓN FÍSICA en formato Markdown muy profesional, estético y estructurado.
@@ -747,8 +772,14 @@ Solo devuelve el texto del título (máximo 12 palabras), sin comillas y sin pun
 
                                 {currentStep === 7 && result && (
                                     <div style={{ background: '#0f172a', padding: '2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)', overflowY: 'auto', maxHeight: '600px', whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: '0.95rem' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                                             <button className="btn btn-secondary" onClick={() => { navigator.clipboard.writeText(result); alert("Copiado!") }}>Copiar</button>
+                                            <button className="btn btn-secondary" onClick={downloadAsWord}>
+                                                <FileText size={16} style={{ marginRight: '0.5rem' }} /> Descargar en Word
+                                            </button>
+                                            <button className="btn btn-primary" onClick={() => window.print()}>
+                                                <Download size={16} style={{ marginRight: '0.5rem' }} /> Imprimir PDF
+                                            </button>
                                         </div>
                                         {result}
                                     </div>

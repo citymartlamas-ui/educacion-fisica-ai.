@@ -478,29 +478,6 @@ const AdminDashboard = () => {
                     width: 100%;
                 }
 
-                .admin-table-wrapper {
-                    overflow-x: auto;
-                }
-
-                .admin-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                    font-size: 0.9rem;
-                }
-
-                .admin-table th {
-                    text-align: left;
-                    padding: 1rem;
-                    color: var(--text-secondary);
-                    font-weight: 600;
-                    border-bottom: 1px solid var(--glass-border);
-                }
-
-                .admin-table td {
-                    padding: 1rem;
-                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-                }
-
                 .user-cell {
                     display: flex;
                     align-items: center;

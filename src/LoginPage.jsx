@@ -163,7 +163,7 @@ function LoginPage({ onNavigate }) {
                                         <input type="text" className="form-input" placeholder="Tu nombre" style={{ paddingLeft: '2.5rem' }} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
                                     </div>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                                <div className="form-grid-2">
                                     <div className="form-group">
                                         <label className="form-label">DNI (Opcional)</label>
                                         <input type="text" className="form-input" placeholder="Número DNI" value={formData.dni} onChange={(e) => setFormData({ ...formData, dni: e.target.value })} />

@@ -312,7 +312,7 @@ function SessionPreview({ data }) {
     };
 
     return (
-        <div>
+        <div className="admin-table-wrapper" style={{ padding: '0.5rem' }}>
             {/* TÍTULO */}
             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
@@ -632,7 +632,7 @@ Devuelve SOLO un array JSON válido con 5 strings, sin texto adicional. Ejemplo:
                         <input type="text" className="form-input" placeholder="Nombre del director(a)" value={formData.director} onChange={(e) => setFormData({ ...formData, director: e.target.value })} />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-grid-2">
                         <div className="form-group">
                             <label className="form-label">DRE:</label>
                             <input type="text" className="form-input" placeholder="Ej: DRE San Martín" value={formData.dre} onChange={(e) => setFormData({ ...formData, dre: e.target.value })} />
@@ -648,7 +648,7 @@ Devuelve SOLO un array JSON válido con 5 strings, sin texto adicional. Ejemplo:
                         <input type="text" className="form-input" placeholder="Ej: Zona rural de Tarapoto" value={formData.contexto} onChange={(e) => setFormData({ ...formData, contexto: e.target.value })} />
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-grid-2">
                         <div className="form-group">
                             <label className="form-label">Nivel Educativo:</label>
                             <select className="form-select" value={formData.nivel} onChange={(e) => setFormData({ ...formData, nivel: e.target.value })}>
@@ -695,7 +695,7 @@ Devuelve SOLO un array JSON válido con 5 strings, sin texto adicional. Ejemplo:
                         </div>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-grid-2">
                         <div className="form-group">
                             <label className="form-label">Competencia Transversal:</label>
                             <select className="form-select" value={formData.competenciaTransversal} onChange={(e) => setFormData({ ...formData, competenciaTransversal: e.target.value })}>
@@ -747,7 +747,7 @@ Devuelve SOLO un array JSON válido con 5 strings, sin texto adicional. Ejemplo:
                         )}
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-grid-2">
                         <div className="form-group">
                             <label className="form-label">Duración:</label>
                             <select className="form-select" value={formData.duracion} onChange={(e) => setFormData({ ...formData, duracion: e.target.value })}>
@@ -780,7 +780,7 @@ Devuelve SOLO un array JSON válido con 5 strings, sin texto adicional. Ejemplo:
                     </div>
 
                     {/* Extras */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="form-grid-2">
                         <label style={{
                             display: 'flex', alignItems: 'flex-start', gap: '0.75rem',
                             background: formData.generarTeoria ? 'var(--color-primary-glow)' : 'var(--glass-bg)',

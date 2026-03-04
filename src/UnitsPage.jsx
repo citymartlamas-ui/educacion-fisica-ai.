@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    BookOpen, ArrowLeft, Plus, FileText, Layout,
+    BookOpen, ArrowLeft, Plus, FileText, Layout, Download,
     CheckCircle, ChevronRight, Search, Sparkles, Loader2,
     Check, Settings, Users, Calendar, Target, Clock, School
 } from 'lucide-react';
@@ -629,10 +629,15 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
                         {currentStep === 3 && Step4Confirmacion()}
 
                         {currentStep === 4 && result && (
-                            <div style={{ background: '#0f172a', padding: '2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)', overflowY: 'auto', maxHeight: '600px', whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: '0.95rem' }}>
+                            <div style={{ background: '#0f172a', padding: '2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)', overflowY: 'auto', overflowX: 'auto', maxHeight: '600px', whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: '0.95rem' }}>
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
                                     <button className="btn btn-secondary" onClick={() => { navigator.clipboard.writeText(result); alert("¡Documento Copiado!") }}>Copiar Texto</button>
-                                    <button className="btn btn-primary" onClick={downloadAsWord} style={{ background: '#2563eb', border: 'none' }}>Descargar Word</button>
+                                    <button className="btn btn-secondary" onClick={downloadAsWord}>
+                                        <FileText size={16} style={{ marginRight: '0.5rem' }} /> Descargar en Word
+                                    </button>
+                                    <button className="btn btn-primary" onClick={() => window.print()}>
+                                        <Download size={16} style={{ marginRight: '0.5rem' }} /> Imprimir PDF
+                                    </button>
                                 </div>
                                 {result}
                             </div>
