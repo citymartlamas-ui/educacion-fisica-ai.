@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, Suspense } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
     Dumbbell, Sparkles, BookOpen, LayoutDashboard, ShieldCheck,
@@ -8,7 +8,14 @@ import {
 } from 'lucide-react'
 import { useAuth } from './AuthContext'
 import LoginPage from './LoginPage'
-import Generator from './Generator'
+
+// Lazy load large components
+const Generator = React.lazy(() => import('./Generator'))
+const AdminDashboard = React.lazy(() => import('./AdminDashboard'))
+const GamesPage = React.lazy(() => import('./GamesPage'))
+const PlanAnualPage = React.lazy(() => import('./PlanAnualPage'))
+const UnitsPage = React.lazy(() => import('./UnitsPage'))
+const RubricsPage = React.lazy(() => import('./RubricsPage'))
 
 const fadeIn = {
     initial: { opacity: 0, y: 20 },
@@ -25,6 +32,7 @@ const staggerContainer = {
 function App() {
     const { user, loading, logout } = useAuth()
     const [currentPage, setCurrentPage] = useState('home')
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
     if (loading) {
         return (
@@ -59,6 +67,16 @@ function App() {
                 return <ToolsPage onNavigate={setCurrentPage} user={user} />
             case 'generator':
                 return <GeneratorPage onNavigate={setCurrentPage} />
+            case 'games':
+                return <Suspense fallback={<LoadingModule />}><GamesPage onNavigate={setCurrentPage} user={user} /></Suspense>
+            case 'plan-anual':
+                return <Suspense fallback={<LoadingModule />}><PlanAnualPage onNavigate={setCurrentPage} user={user} /></Suspense>
+            case 'unidades':
+                return <Suspense fallback={<LoadingModule />}><UnitsPage onNavigate={setCurrentPage} user={user} /></Suspense>
+            case 'rubricas':
+                return <Suspense fallback={<LoadingModule />}><RubricsPage onNavigate={setCurrentPage} user={user} /></Suspense>
+            case 'admin':
+                return <Suspense fallback={<LoadingModule />}><AdminDashboard /></Suspense>
             default:
                 return <LandingPage onNavigate={setCurrentPage} user={user} />
         }
@@ -86,6 +104,9 @@ function App() {
                     <ul className="navbar-links" style={{ display: 'flex' }}>
                         <li><a href="#" className={currentPage === 'home' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setCurrentPage('home'); }}>Inicio</a></li>
                         <li><a href="#" className={currentPage === 'tools' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setCurrentPage('tools'); }}>Herramientas</a></li>
+                        {user?.role === 'admin' && (
+                            <li><a href="#" className={currentPage === 'admin' ? 'active' : ''} onClick={(e) => { e.preventDefault(); setCurrentPage('admin'); }}>Admin</a></li>
+                        )}
                     </ul>
 
                     <div className="navbar-actions">
@@ -144,6 +165,20 @@ function App() {
     )
 }
 
+function LoadingModule() {
+    return (
+        <div style={{ padding: '4rem', textAlign: 'center' }}>
+            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}>
+                <Sparkles size={32} color="var(--color-primary)" />
+            </motion.div>
+            <p style={{ marginTop: '1rem', color: 'var(--text-muted)' }}>Cargando módulo inteligente...</p>
+        </div>
+    )
+}
+
+/* ============================================
+   LANDING PAGE
+   ============================================ */
 function LandingPage({ onNavigate, user }) {
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
@@ -232,20 +267,40 @@ function LandingPage({ onNavigate, user }) {
     )
 }
 
+/* ============================================
+   TOOLS PAGE
+   ============================================ */
 function ToolsPage({ onNavigate, user }) {
     const tools = [
         { id: 'generator', num: '01', title: 'Generador de Sesiones', desc: 'Crea sesiones de EF completas: Inicio, Desarrollo y Cierre.', icon: <ClipboardList size={18} />, tag: 'Más Popular' },
-        { id: 'plan-anual', num: '02', title: 'Plan Anual', desc: 'Genera tu programación anual alineada al currículo nacional.', icon: <Calendar size={18} />, tag: 'Próximamente' },
-        { id: 'unidades', num: '03', title: 'Unidades Didácticas', desc: 'Diseña unidades completas con competencias y desempeños.', icon: <BookOpen size={18} />, tag: 'Próximamente' },
-        { id: 'rubricas', num: '04', title: 'Rúbricas de Evaluación', desc: 'Crea rúbricas específicas para habilidades motrices.', icon: <FileText size={18} />, tag: 'Próximamente' },
-        { id: 'games', num: '05', title: 'Banco de Juegos', desc: 'Biblioteca de juegos motores organizados por edad.', icon: <Trophy size={18} />, tag: 'Próximamente' },
-        { id: 'calculator', num: '06', title: 'Calculadora Física', desc: 'Test de Cooper, IMC, resistencia y más.', icon: <Target size={18} />, tag: 'Próximamente' },
+        { id: 'plan-anual', num: '02', title: 'Plan Anual', desc: 'Genera tu programación anual alineada al currículo nacional.', icon: <Calendar size={18} />, tag: 'IA Avanzada' },
+        { id: 'unidades', num: '03', title: 'Unidades Didácticas', desc: 'Diseña unidades completas con competencias y desempeños.', icon: <BookOpen size={18} />, tag: 'Nuevo' },
+        { id: 'rubricas', num: '04', title: 'Rúbricas de Evaluación', desc: 'Crea rúbricas específicas para habilidades motrices.', icon: <FileText size={18} />, tag: 'IA Avanzada' },
+        { id: 'games', num: '05', title: 'Banco de Juegos', desc: 'Biblioteca de juegos motores organizados por edad.', icon: <Trophy size={18} />, tag: 'Recurso' },
+        { id: 'home', num: '06', title: 'Calculadora Física', desc: 'Test de Cooper, IMC, resistencia y más.', icon: <Target size={18} />, tag: 'Próximamente' },
     ]
 
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <section className="section">
                 <div className="container">
+                    {user && (
+                        <div style={{
+                            padding: '1rem 1.5rem',
+                            background: 'var(--color-primary-glow)',
+                            border: '1px solid rgba(0, 229, 255, 0.2)',
+                            borderRadius: 'var(--radius-md)',
+                            marginBottom: '2rem',
+                            fontSize: '0.9rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.75rem'
+                        }}>
+                            <Bell size={16} color="var(--color-primary)" />
+                            <span>¡Bienvenido, <strong>{user.displayName || user.email?.split('@')[0]}</strong>! Elige una herramienta inteligente.</span>
+                        </div>
+                    )}
+
                     <div className="section-header">
                         <div className="overline">Panel de Control</div>
                         <h2>Tus <span className="text-gradient">Herramientas</span> IA</h2>
@@ -266,7 +321,7 @@ function ToolsPage({ onNavigate, user }) {
                                 className="glass tool-card"
                                 onClick={() => {
                                     if (!user) onNavigate('login')
-                                    else if (tool.id === 'generator') onNavigate(tool.id)
+                                    else onNavigate(tool.id)
                                 }}
                                 style={{ padding: '2rem' }}
                             >
