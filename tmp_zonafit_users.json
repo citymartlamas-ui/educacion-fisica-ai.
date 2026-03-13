@@ -1,0 +1,23 @@
+{"users": [
+{
+  "localId": "Af6412gqArWDlOGHBhTGV060Bjx1",
+  "email": "x1manuel5x@gmail.com",
+  "emailVerified": false,
+  "passwordHash": "OmMUp/uieh77wbcVs6j675eUa2fyo6B4+J6Wy6Yz8dIzvFfHB9XMTwtAfXl8G3BEY9cHDcUSov0BNvJsQGx2vA==",
+  "salt": "oFkU0d2DqQWsSw==",
+  "displayName": "manuel",
+  "lastSignedInAt": "1772926986011",
+  "createdAt": "1772926986011",
+  "providerUserInfo": []
+},
+{
+  "localId": "EcbdNJt2mUMLheVKOh17tHhfTeh1",
+  "email": "admin@zonafit.com",
+  "emailVerified": false,
+  "passwordHash": "NvpMCkdGAbotdHbanbN5Iac7OyAPps0iotkIvIZyWQWJf93IITlvACzmt/+qGINxuS9g06taWjxfGG1qQMtc+g==",
+  "salt": "gX5GWyCqKCKi+w==",
+  "displayName": "administrador",
+  "lastSignedInAt": "1772926475272",
+  "createdAt": "1772926475272",
+  "providerUserInfo": []
+}]}

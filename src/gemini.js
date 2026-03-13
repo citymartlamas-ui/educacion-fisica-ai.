@@ -1,20 +1,23 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+const apiKey = (import.meta.env.VITE_GEMINI_API_KEY || "").trim();
 
-console.log("Gemini API Key loaded:", apiKey ? "Yes (" + apiKey.substring(0, 10) + "...)" : "NO - MISSING!");
+console.log("Gemini API Key loaded:", apiKey ? "Yes (" + apiKey.substring(0, 5) + "...)" : "NO - MISSING!");
 
 let genAI = null;
 let model = null;
 
+const BUILD_TIME = "2026-03-13 12:00"; // v4.4 - Unidades Didácticas Premium y Profesionales
+const MODEL_NAME = "gemini-2.5-flash"; // Única fuente de verdad para el modelo
+
 try {
     if (apiKey) {
         genAI = new GoogleGenerativeAI(apiKey);
-        // Usamos gemini-2.5-flash que es el estándar actual según tu lista de modelos
-        model = genAI.getGenerativeModel({
-            model: "gemini-2.5-flash"
-        });
-        console.log("Gemini Model Initialized: gemini-2.5-flash (Latest)");
+        // Usando el modelo especificado centralmente
+        model = genAI.getGenerativeModel({ model: MODEL_NAME });
+        console.log(`[${BUILD_TIME}] Gemini Initialized: ${MODEL_NAME}`);
+    } else {
+        console.error("CRITICAL: API Key no encontrada.");
     }
 } catch (err) {
     console.error("Gemini Initialization Failed:", err);
@@ -22,19 +25,43 @@ try {
 
 export { model };
 
-export const generateLessonPlan = async (prompt) => {
+export const generateAIContent = async (prompt) => {
+    if (!model) {
+        throw new Error("El modelo de IA no está inicializado. Verifica tu API Key.");
+    }
     try {
         const result = await model.generateContent(prompt);
         const response = await result.response;
-        return response.text();
+        return response.text().trim();
     } catch (error) {
-        console.error("GEMINI ERROR DETAILS:", error.message);
-        console.error("FULL ERROR:", JSON.stringify(error, null, 2));
-        return "Error: " + error.message;
+        console.error("GEMINI ERROR DETECTADO:", error.message);
+        if (error.message.includes("404")) {
+            throw new Error("Error 404: El modelo especificado no fue encontrado. Usando configuración base.");
+        }
+        throw error;
     }
 };
 
-// Capacidades oficiales del CNEB - Educación Física (NO deben modificarse)
+export const generateLessonPlan = async (prompt) => {
+    return generateAIContent(prompt);
+};
+
+export const generateFastSuggestion = async (prompt) => {
+    if (!genAI) throw new Error("AI not initialized");
+    try {
+        const fastModel = genAI.getGenerativeModel({
+            model: MODEL_NAME,
+            generationConfig: { maxOutputTokens: 250 }
+        });
+        const result = await fastModel.generateContent(prompt);
+        const response = await result.response;
+        return response.text().trim();
+    } catch (error) {
+        console.error("GEMINI FAST SUGGESTION ERROR:", error.message);
+        throw error;
+    }
+};
+
 const CNEB_CAPACIDADES = {
     "Se desenvuelve de manera autónoma a través de su motricidad": [
         "Comprende su cuerpo",
@@ -50,313 +77,478 @@ const CNEB_CAPACIDADES = {
     ]
 };
 
-// Estándares de Aprendizaje oficiales del CNEB - Educación Física
-// Fuente: Currículo Nacional de la Educación Básica (CNEB) - Texto copiado textualmente
-// Mapeo: Nivel 1=Ciclo I | Nivel 2=Ciclo II | Nivel 3=Ciclo III | Nivel 4=Ciclo IV
-//        Nivel 5=Ciclo V | Nivel 6=Ciclo VI | Nivel 7=Ciclo VII
 const CNEB_ESTANDARES = {
-
-    // CICLO I: Inicial 3 y 4 años
-    "Ciclo I": {
-        "Se desenvuelve de manera autónoma a través de su motricidad":
-            "Se desenvuelve de manera autónoma a través de su motricidad cuando explora y descubre desde sus posibilidades de movimiento las partes de su cuerpo y su imagen corporal. Realiza acciones motrices básicas en las que coordina movimientos para desplazarse y manipular objetos. Expresa corporalmente a través del gesto, el tono, las posturas y movimientos sus sensaciones y emociones en situaciones cotidianas.",
-        "Asume una vida saludable":
-            "Este nivel tiene principalmente como base el nivel 1 de la competencia \"Se desenvuelve de manera autónoma a través de su motricidad\".",
-        "Interactúa a través de sus habilidades sociomotrices":
-            "Este nivel tiene principalmente como base el nivel 1 de la competencia \"Se desenvuelve de manera autónoma a través de su motricidad\"."
-    },
-
-    // CICLO II: Inicial 5 años
-    "Ciclo II": {
-        "Se desenvuelve de manera autónoma a través de su motricidad":
-            "Se desenvuelve de manera autónoma a través de su motricidad cuando explora y descubre su lado dominante y sus posibilidades de movimiento por propia iniciativa en situaciones cotidianas. Realiza acciones motrices básicas en las que coordina movimientos para desplazarse con seguridad y utiliza objetos con precisión, orientándose y regulando sus acciones en relación a estos, a las personas, el espacio y el tiempo. Expresa corporalmente sus sensaciones, emociones y sentimientos a través del tono, gesto, posturas, ritmo y movimiento en situaciones de juego.",
-        "Asume una vida saludable":
-            "Este nivel tiene principalmente como base el nivel 2 de la competencia \"Se desenvuelve de manera autónoma a través de su motricidad\".",
-        "Interactúa a través de sus habilidades sociomotrices":
-            "Este nivel tiene principalmente como base el nivel 2 de la competencia \"Se desenvuelve de manera autónoma a través de su motricidad\"."
-    },
-
-    // CICLO III: 1° y 2° Primaria
     "Ciclo III": {
-        "Se desenvuelve de manera autónoma a través de su motricidad":
-            "Se desenvuelve de manera autónoma a través de su motricidad cuando comprende cómo usar su cuerpo en las diferentes acciones que realiza utilizando su lado dominante y realiza movimientos coordinados que le ayudan a sentirse seguro en la práctica de actividades físicas. Se orienta espacialmente en relación a sí mismo y a otros puntos de referencia. Se expresa corporalmente con sus pares utilizando el ritmo, gestos y movimientos como recursos para comunicar.",
-        "Asume una vida saludable":
-            "Asume una vida saludable cuando diferencia los alimentos saludables de su dieta personal y familiar, los momentos adecuados para ingerirlos y las posturas que lo ayudan al buen desempeño en la práctica de actividades físicas, recreativas y de la vida cotidiana, reconociendo la importancia del autocuidado. Participa regularmente en la práctica de actividades lúdicas identificando su ritmo cardíaco, respiración y sudoración; utiliza prácticas de activación corporal y psicológica antes de la actividad lúdica.",
-        "Interactúa a través de sus habilidades sociomotrices":
-            "Interactúa a través de sus habilidades sociomotrices al aceptar al otro como compañero de juego y busca el consenso sobre la manera de jugar para lograr el bienestar común y muestra una actitud de respeto evitando juegos violentos y humillantes; expresa su posición ante un conflicto con intención de resolverlo y escucha la posición de sus compañeros en los diferentes tipos de juegos. Resuelve situaciones motrices a través de estrategias colectivas y participa en la construcción de reglas de juego adaptadas a la situación y al entorno, para lograr un objetivo común en la práctica de actividades lúdicas."
+        "Se desenvuelve de manera autónoma a través de su motricidad": "Se desenvuelve de manera autónoma a través de su motricidad cuando comprende su cuerpo y se expresa corporalmente. Realiza habilidades motrices básicas orientándose en el espacio y en el tiempo con relación a sí mismo y a otros puntos de referencia.",
+        "Asume una vida saludable": "Asume una vida saludable cuando comprende la importancia de la activación corporal e higiene personal. Reconoce la necesidad de utilizar cuidados básicos antes, durante y después de la práctica corporal.",
+        "Interactúa a través de sus habilidades sociomotrices": "Interactúa a través de sus habilidades sociomotrices al participar en juegos y aceptar a otros. Construye colectivamente acuerdos y reglas para cuidar de sí y sus pares."
     },
-
-    // CICLO IV: 3° y 4° Primaria
     "Ciclo IV": {
-        "Se desenvuelve de manera autónoma a través de su motricidad":
-            "Se desenvuelve de manera autónoma a través de su motricidad cuando comprende cómo usar su cuerpo explorando la alternancia de sus lados corporales de acuerdo a su utilidad y ajustando la posición del cuerpo en el espacio y en el tiempo en diferentes etapas de las acciones motrices, con una actitud positiva y una voluntad de experimentar situaciones diversas. Experimenta nuevas posibilidades expresivas de su cuerpo y las utiliza para relacionarse y comunicar ideas, emociones, sentimientos, pensamientos.",
-        "Asume una vida saludable":
-            "Asume una vida saludable cuando diferencia los alimentos de su dieta personal, familiar y de su región que son saludables de los que no lo son. Previene riesgos relacionados con la postura e higiene conociendo aquellas que favorecen y no favorecen su salud e identifica su fuerza, resistencia y velocidad en la práctica de actividades lúdicas. Adapta su esfuerzo en la práctica de actividad física de acuerdo a las características de la actividad y a sus posibilidades, aplicando conocimientos relacionados con el ritmo cardíaco, la respiración y la sudoración. Realiza prácticas de activación corporal y psicológica, e incorpora el autocuidado relacionado con los ritmos de actividad y descanso para mejorar el funcionamiento de su organismo.",
-        "Interactúa a través de sus habilidades sociomotrices":
-            "Interactúa a través de sus habilidades sociomotrices al tomar acuerdos sobre la manera de jugar y los posibles cambios o conflictos que se den y propone adaptaciones o modificaciones para favorecer la inclusión de compañeros en actividades lúdicas, aceptando al oponente como compañero de juego. Adapta la estrategia de juego anticipando las intenciones de sus compañeros y oponentes para cumplir con los objetivos planteados. Propone reglas y las modifica de acuerdo a las necesidades del contexto y los intereses del grupo en la práctica de actividades físicas."
+        "Se desenvuelve de manera autónoma a través de su motricidad": "Se desenvuelve de manera autónoma a través de su motricidad cuando reconoce la izquierda y derecha en relación a objetos y en sus pares para mejorar sus posibilidades de movimiento.",
+        "Asume una vida saludable": "Asume una vida saludable cuando reconoce la importancia de la frecuencia cardíaca y respiratoria, identifica alimentos saludables y adopta posturas adecuadas.",
+        "Interactúa a través de sus habilidades sociomotrices": "Interactúa a través de sus habilidades sociomotrices proponiendo cambios en las condiciones de juego para posibilitar la inclusión de sus pares."
     },
-
-    // CICLO V: 5° y 6° Primaria
     "Ciclo V": {
-        "Se desenvuelve de manera autónoma a través de su motricidad":
-            "Se desenvuelve de manera autónoma a través de su motricidad cuando acepta sus posibilidades y limitaciones según su desarrollo e imagen corporal. Realiza secuencias de movimientos coordinados aplicando la alternancia de sus lados corporales de acuerdo a su utilidad. Produce con sus pares secuencias de movimientos corporales, expresivos o rítmicos en relación a una intención.",
-        "Asume una vida saludable":
-            "Asume una vida saludable cuando utiliza instrumentos que miden la aptitud física e estado nutricional e interpreta la información de los resultados obtenidos para mejorar su calidad de vida. Replantea sus hábitos saludables, higiénicos y alimenticios tomando en cuenta los cambios físicos propios de la edad, evita la realización de ejercicios y posturas contraindicadas para la salud en la práctica de actividad física. Incorpora prácticas saludables para su organismo consumiendo alimentos adecuados a las características personales y evitando el consumo de drogas. Propone ejercicios de activación y relajación antes, durante y después de la práctica y participa en actividad física de distinta intensidad regulando su esfuerzo.",
-        "Interactúa a través de sus habilidades sociomotrices":
-            "Interactúa a través de sus habilidades sociomotrices proactivamente con un sentido de cooperación teniendo en cuenta las adaptaciones o modificaciones propuestas por el grupo en diferentes actividades físicas. Hace uso de estrategias de cooperación y oposición seleccionando los diferentes elementos técnicos y tácticos que se pueden dar en la práctica de actividades lúdicas y predeportivas, para resolver la situación de juego que le dé un mejor resultado y que responda a las variaciones que se presentan en el entorno."
+        "Se desenvuelve de manera autónoma a través de su motricidad": "Se desenvuelve de manera autónoma a través de su motricidad cuando toma conciencia de cómo su imagen corporal contribuye a la construcción de su identidad y autoestima. Organiza su cuerpo en relación a las acciones.",
+        "Asume una vida saludable": "Asume una vida saludable cuando reconoce los cambios corporales que experimenta durante la actividad física, identificando la importancia de la higiene y alimentación saludable.",
+        "Interactúa a través de sus habilidades sociomotrices": "Interactúa a través de sus habilidades sociomotrices cuando hace uso de estrategias de cooperación y oposición seleccionando elementos técnicos y tácticos."
     },
-
-    // CICLO VI: 1° y 2° Secundaria
     "Ciclo VI": {
-        "Se desenvuelve de manera autónoma a través de su motricidad":
-            "Se desenvuelve de manera autónoma a través de su motricidad cuando relaciona cómo su imagen corporal y la aceptación de los otros influyen en el concepto de sí mismo. Realiza habilidades motrices específicas, regulando su tono, postura, equilibrio y tomando como referencia la trayectoria de objetos, los otros y sus propios desplazamientos. Produce secuencias de movimientos y gestos corporales para manifestar sus emociones con base en el ritmo y la música y utilizando diferentes materiales.",
-        "Asume una vida saludable":
-            "Asume una vida saludable cuando comprende los beneficios que la práctica de actividad física produce sobre su salud, para mejorar su calidad de vida. Conoce su estado nutricional e identifica los beneficios nutritivos y el origen de los alimentos, promueve el consumo de alimentos de su región, analiza la proporción adecuada de ingesta para mejorar su rendimiento físico y mental. Analiza los hábitos perjudiciales para su organismo. Realiza prácticas de higiene personal y del ambiente. Adopta posturas adecuadas para evitar lesiones y accidentes en la práctica de actividad física y en la vida cotidiana. Realiza prácticas que ayuden a mejorar sus capacidades físicas con las que regula su esfuerzo controlando su frecuencia cardíaca y respiratoria, al participar en sesiones de actividad física de diferente intensidad.",
-        "Interactúa a través de sus habilidades sociomotrices":
-            "Interactúa a través de sus habilidades sociomotrices con autonomía en situaciones que no le son favorables y asume con una actitud de liderazgo los desafíos propios de la práctica de actividades físicas, experimentando el placer y disfrute que ellas representan. Formula y aplica estrategias para solucionar problemas individuales y colectivos, incorporando elementos técnicos y tácticos pertinentes y adecuando a los cambios que se dan en la práctica. Analiza los posibles aciertos y dificultades ocurridos durante la práctica para mejorar la estrategia de juego."
+        "Se desenvuelve de manera autónoma a través de su motricidad": "Se desenvuelve de manera autónoma a través de su motricidad cuando relaciona cómo su imagen corporal y la aceptación de los otros influyen en el concepto de sí mismo. Realiza habilidades motrices específicas, regulando su tono, postura, equilibrio y tomando como referencia la trayectoria de objetos, los otros y sus propios desplazamientos.",
+        "Asume una vida saludable": "Asume una vida saludable cuando comprende los beneficios que la práctica de actividad física produce sobre su salud, para mejorar su calidad de vida. Conoce su estado nutricional e identifica los beneficios nutritivos de los alimentos de su comunidad, de su región y del país.",
+        "Interactúa a través de sus habilidades sociomotrices": "Interactúa a través de sus habilidades sociomotrices con autonomía en situaciones que no le son favorables y asume con una actitud de liderazgo los desafíos propios de la práctica de actividades físicas."
     },
-
-    // CICLO VII: 3°, 4° y 5° Secundaria
     "Ciclo VII": {
-        "Se desenvuelve de manera autónoma a través de su motricidad":
-            "Se desenvuelve de manera autónoma a través de su motricidad cuando toma conciencia de cómo su imagen corporal contribuye a la construcción de su identidad y autoestima. Organiza su cuerpo en relación a las acciones y habilidades motrices según la práctica de actividad física que quiere realizar. Produce con sus compañeros diálogos corporales que combinan movimientos en los que expresan emociones, sentimientos y pensamientos sobre temas de su interés en un determinado contexto.",
-        "Asume una vida saludable":
-            "Asume una vida saludable cuando evalúa sus necesidades calóricas y toma en cuenta su gasto calórico diario, los alimentos que consume, su origen e inocuidad, y las características de la actividad física que practica. Elabora un programa de actividad física y alimentación saludable, interpretando los resultados de las pruebas de aptitud física, entre otras, para mantener y/o mejorar su bienestar. Participa regularmente en sesiones de actividad física de diferente intensidad y promueve campañas donde se promocione la salud integrada al bienestar colectivo.",
-        "Interactúa a través de sus habilidades sociomotrices":
-            "Interactúa a través de sus habilidades sociomotrices integrando a todas las personas de la comunidad educativa en eventos lúdico-deportivos y promoviendo la práctica de actividad física basada en el disfrute, la tolerancia, equidad de género, inclusión y respeto, asumiendo su responsabilidad durante todo el proceso. Propone sistemas tácticos de juego en la resolución de problemas y los adecúa según las necesidades del entorno, asumiendo y adjudicando roles y funciones bajo un sistema de juego que vincula las habilidades y capacidades de cada uno de los integrantes del equipo en la práctica de diferentes actividades físicas."
+        "Se desenvuelve de manera autónoma a través de su motricidad": "Se desenvuelve de manera autónoma a través de su motricidad cuando toma conciencia de su imagen corporal y la utiliza para expresar emociones y sentimientos, mejorando su desempeño motor en situaciones complejas y variadas.",
+        "Asume una vida saludable": "Asume una vida saludable cuando evalúa sus necesidades calóricas y toma en cuenta su gasto calórico diario, los alimentos que consume, su origen e inocuidad.",
+        "Interactúa a través de sus habilidades sociomotrices": "Interactúa a través de sus habilidades sociomotrices integrando a todas las personas de la comunidad educativa en eventos lúdico-deportivos y promoviendo la práctica de actividad física basada en el disfrute."
     }
 };
 
-// Función para determinar el ciclo a partir del grado y nivel
 const getCiclo = (grado, nivel) => {
     const g = (grado || '').toLowerCase();
     const n = (nivel || '').toLowerCase();
-
-    // Inicial
-    if (n.includes('inicial') || n.includes('preescolar')) {
-        if (g.includes('3') || g.includes('4')) return 'Ciclo I';
-        return 'Ciclo II'; // 5 años
-    }
-
-    // Primaria
+    if (n.includes('inicial')) return 'Ciclo II';
     if (n.includes('primaria')) {
-        if (g.includes('1') || g.includes('primer')) return 'Ciclo III';
-        if (g.includes('2') || g.includes('segundo')) return 'Ciclo III';
-        if (g.includes('3') || g.includes('tercer')) return 'Ciclo IV';
-        if (g.includes('4') || g.includes('cuarto')) return 'Ciclo IV';
-        if (g.includes('5') || g.includes('quinto')) return 'Ciclo V';
-        if (g.includes('6') || g.includes('sexto')) return 'Ciclo V';
+        if (g.includes('1') || g.includes('2')) return 'Ciclo III';
+        if (g.includes('3') || g.includes('4')) return 'Ciclo IV';
+        return 'Ciclo V';
     }
-
-    // Secundaria
-    if (n.includes('secundaria')) {
-        if (g.includes('1') || g.includes('primer')) return 'Ciclo VI';
-        if (g.includes('2') || g.includes('segundo')) return 'Ciclo VI';
-        if (g.includes('3') || g.includes('tercer')) return 'Ciclo VII';
-        if (g.includes('4') || g.includes('cuarto')) return 'Ciclo VII';
-        if (g.includes('5') || g.includes('quinto')) return 'Ciclo VII';
-    }
-
-    // Fallback: detectar por texto del grado
-    if (g.includes('3 años') || g.includes('4 años')) return 'Ciclo I';
-    if (g.includes('5 años')) return 'Ciclo II';
-    if (g.match(/1[°°er]/) || g.match(/2[°°do]/)) return 'Ciclo III';
-    if (g.match(/3[°°er]/) || g.match(/4[°°to]/)) return 'Ciclo IV';
-    if (g.match(/5[°°to]/) || g.match(/6[°°to]/)) return 'Ciclo V';
-
-    return 'Ciclo VI'; // default secundaria
+    if (g.includes('1') || g.includes('2')) return 'Ciclo VI';
+    return 'Ciclo VII';
 };
 
 export const generateStructuredSession = async (formData) => {
     const ciclo = getCiclo(formData.grado, formData.nivel);
     const estandaresCiclo = CNEB_ESTANDARES[ciclo] || CNEB_ESTANDARES['Ciclo VI'];
 
-    // Construir el bloque de competencias con capacidades y estándares oficiales CNEB
-    const competenciasSeleccionadas = formData.sugerirCompetencia
-        ? Object.entries(CNEB_CAPACIDADES)
-            .map(([comp, caps]) => {
-                const estandar = estandaresCiclo[comp] || 'Adaptar según el nivel y grado.';
-                return `COMPETENCIA: ${comp}\nCAPACIDADES OFICIALES (USAR EXACTAMENTE): ${caps.join(' | ')}\nESTÁNDAR DE APRENDIZAJE OFICIAL (${ciclo} - USAR TEXTUALMENTE): ${estandar}`;
-            })
-            .join('\n\n')
-        : formData.competencias
-            .map(comp => {
-                const estandar = estandaresCiclo[comp] || 'Adaptar según el nivel y grado.';
-                return `COMPETENCIA: ${comp}\nCAPACIDADES OFICIALES (USAR EXACTAMENTE): ${(CNEB_CAPACIDADES[comp] || []).join(' | ')}\nESTÁNDAR DE APRENDIZAJE OFICIAL (${ciclo} - USAR TEXTUALMENTE): ${estandar}`;
-            })
-            .join('\n\n');
+    const instruccionesExtras = [];
+    if (formData.generarTeoria) {
+        instruccionesExtras.push("DEBES GENERAR la sección 'teoria' con contenido pedagógico y técnico COMPLETAMENTE REDACTADO. MÍNIMO 300 PALABRAS de contenido real sobre el tema. PROHIBIDO USAR PLACEHOLDERS.");
+    } else {
+        instruccionesExtras.push("La sección 'teoria' debe ser estrictamente null.");
+    }
+    
+    if (formData.generarFicha) {
+        instruccionesExtras.push(`DEBES GENERAR la sección 'ficha_aplicacion' con EXACTAMENTE ${formData.numPreguntasFicha} preguntas reales y variadas. PROHIBIDO USAR PLACEHOLDERS.`);
+    } else {
+        instruccionesExtras.push("La sección 'ficha_aplicacion' debe ser estrictamente null.");
+    }
 
-    const prompt = `Eres un docente experto de Educación Física en Perú. Genera una SESIÓN DE APRENDIZAJE profesional alineada al Currículo Nacional (CNEB).
+    const prompt = `Actúa como un Especialista en Currículo de Educación Física de Perú con amplia experiencia pedagógica. 
+    TAREA: Generar una SESIÓN DE APRENDIZAJE EXCELENTE, profunda y pedagógicamente rica.
 
-DATOS DEL DOCENTE:
-- Docente: ${formData.docente || 'No especificado'}
-- Institución Educativa: ${formData.ie || 'No especificada'}
-- Director(a): ${formData.director || 'No especificado'}
-- DRE: ${formData.dre || 'No especificada'}
-- UGEL: ${formData.ugel || 'No especificada'}
-- Nivel: ${formData.nivel}
-- Grado y Sección: ${formData.grado}
-- Área: ${formData.area}
-- Tema: ${formData.tema}
-- Duración: ${formData.duracion}
-${formData.contexto ? `- Contexto Local: ${formData.contexto}` : ''}
+    REGLAS DE ORO (OBLIGATORIAS - PROHIBIDO INVENTAR):
+    1. COMPETENCIAS: Usa SÓLO estas: [${formData.competencias.join(', ') || 'Una sola competencia coherente'}].
+    2. CAPACIDADES: Usa estrictamente las oficiales del CNEB para cada competencia seleccionada. REFERENCIA: ${JSON.stringify(CNEB_CAPACIDADES)}.
+    3. ESTÁNDARES: Usa el estándar correspondiente al ${ciclo}. REFERENCIA: ${JSON.stringify(estandaresCiclo)}.
+    4. PROHIBIDO INVENTAR O CAMBIAR NOMBRES: No cambies "Comprende su cuerpo" por otra frase. No inventes capacidades para "Asume una vida saludable".
+    5. TÍTULO CORTO: El título de la sesión debe ser corto y directo (máximo 8-10 palabras), para que no ocupe más de una fila.
+    6. NIVEL Y GRADO: ${formData.grado} de ${formData.nivel}.
+    7. TEMA: ${formData.tema}.
 
-⚠️ COMPETENCIAS Y CAPACIDADES OFICIALES DEL CNEB (OBLIGATORIO - COPIA EXACTAMENTE ESTAS CAPACIDADES, NO LAS INVENTES NI LAS CAMBIES):
-${competenciasSeleccionadas}
+    ${instruccionesExtras.join('\n    ')}
 
-COMPETENCIA TRANSVERSAL: ${formData.competenciaTransversal || 'Sugiere una pertinente'}
-ENFOQUE TRANSVERSAL: ${formData.enfoqueTransversal || 'Sugiere uno pertinente'}
-INSTRUMENTO DE EVALUACIÓN: ${formData.instrumento}
-${formData.alumnos ? `LISTA DE ALUMNOS: ${formData.alumnos}` : ''}
+    ESTRUCTURA DE LA SESIÓN (REGLA DE CONCISIÓN):
+    - Datos Informativos: Completar todos los campos.
+    - Propósitos: Definir competencias, capacidades, desempeños precisados y estándares del ${ciclo}.
+    - Secuencia Didáctica (SÉ PRECISO, TÉCNICO Y PUNTUAL. Evita explicaciones redundantes): 
+        * INICIO: Motivación, saberes previos y conflicto cognitivo en párrafos directos.
+        * DESARROLLO: Actividades lúdico-motrices explicadas de forma clara pero sin relleno innecesario.
+        * CIERRE: Metacognición y evaluación rápida de forma puntual.
+    - Instrumento: Criterios claros para ${formData.instrumento}.
 
-RESPONDE ÚNICAMENTE con un JSON válido (sin markdown, sin \`\`\`json, sin texto extra) con esta estructura exacta:
-{
-    "titulo": "Título de la sesión",
-    "datos_informativos": {
-        "docente": "",
-        "ie": "",
-        "director": "",
-        "dre": "",
-        "ugel": "",
-        "nivel": "",
-        "grado": "",
-        "area": "Educación Física",
-        "tema": "",
-        "duracion": "",
-        "fecha": "____/____/2025",
-        "numero_sesion": "N°___"
-    },
-    "propositos_aprendizaje": {
-        "competencias": [
-            {
-                "nombre": "nombre de la competencia",
-                "capacidades": ["capacidad 1", "capacidad 2"],
-                "estandar": "COPIA AQUÍ EL ESTÁNDAR OFICIAL DEL CICLO QUE SE TE PROPORCIONÓ TEXTUALMENTE"
-            }
-        ],
-        "competencia_transversal": "",
-        "enfoque_transversal": "",
-        "valor": "",
-        "actitud": ""
-    },
-    "proposito_sesion": "Párrafo describiendo el propósito de la sesión",
-    "situacion_significativa": "Narrativa motivadora y desafiante para los estudiantes",
-    "criterios_evaluacion": [
-        {"criterio": "descripción del criterio", "evidencia": "qué evidencia se espera"}
-    ],
-    "evidencia_aprendizaje": "Descripción de la evidencia",
-    "producto": "Resultado tangible de la sesión",
-    "secuencia_didactica": {
-        "inicio": {
-            "duracion": "15-20 min",
-            "actividades": [
-                {"momento": "Motivación", "descripcion": "Descripción detallada", "recursos": "materiales"},
-                {"momento": "Saberes Previos", "descripcion": "Preguntas o actividades", "recursos": ""},
-                {"momento": "Problematización", "descripcion": "Situación problemática", "recursos": ""},
-                {"momento": "Propósito", "descripcion": "Se comunica el propósito de la sesión", "recursos": ""}
-            ]
+    RESPONDE EXCLUSIVAMENTE CON UN OBJETO JSON SIGUIENDO ESTE MODELO (SIN COMENTARIOS):
+    {
+        "titulo": "Título Creativo de la Sesión",
+        "datos_informativos": {
+            "docente": "${formData.docente}",
+            "ie": "${formData.ie}",
+            "director": "${formData.director || 'Nombre del Director'}",
+            "nivel": "${formData.nivel}",
+            "grado": "${formData.grado}",
+            "area": "Educación Física",
+            "tema": "${formData.tema}",
+            "duracion": "${formData.duracion}",
+            "fecha": "Fecha de ejecución"
         },
-        "desarrollo": {
-            "duracion": "50-60 min",
-            "actividades": [
-                {"momento": "Activación Corporal / Calentamiento", "descripcion": "Ejercicios detallados", "recursos": "materiales", "organizacion": "individual/parejas/grupos", "tiempo": "10 min"},
-                {"momento": "Parte Principal", "descripcion": "Actividades principales con variantes detalladas paso a paso", "recursos": "materiales", "organizacion": "grupos", "tiempo": "30 min"},
-                {"momento": "Vuelta a la Calma", "descripcion": "Ejercicios de relajación y estiramiento", "recursos": "", "organizacion": "individual", "tiempo": "10 min"}
-            ]
+        "propositos_aprendizaje": {
+            "competencias": [
+                { 
+                    "nombre": "Nombre de la competencia", 
+                    "capacidades": ["Capacidad A", "Capacidad B"], 
+                    "desempeños": ["Desempeño precisado para el grado"],
+                    "estandar": "Texto del estándar del ciclo" 
+                }
+            ],
+            "competencia_transversal": "Gestiona su aprendizaje de manera autónoma",
+            "enfoque_transversal": "${formData.enfoqueTransversal || 'Enfoque de derechos'}",
+            "valor": "Valor del enfoque",
+            "actitud": "Actitud observable detallada"
         },
-        "cierre": {
-            "duracion": "10-15 min",
-            "actividades": [
-                {"momento": "Evaluación Formativa", "descripcion": "Actividad de evaluación", "recursos": ""},
-                {"momento": "Metacognición", "descripcion": "Preguntas de reflexión: ¿Qué aprendimos hoy? ¿Cómo lo aprendimos? ¿Para qué nos sirve?", "recursos": ""}
-            ]
-        }
-    },
-    "instrumento_evaluacion": {
-        "tipo": "${formData.instrumento}",
-        "criterios_instrumento": [
-            {"criterio": "criterio 1 observable y medible"},
-            {"criterio": "criterio 2 observable y medible"},
-            {"criterio": "criterio 3 observable y medible"},
-            {"criterio": "criterio 4 observable y medible"}
+        "proposito_sesion": "Redactar el propósito pedagógico aquí",
+        "evidencia_aprendizaje": "Descripción de la evidencia",
+        "situacion_significativa": "Redactar la situación significativa/reto aquí (mínimo 100 palabras)",
+        "criterios_evaluacion": [
+            { "criterio": "Criterio 1", "evidencia": "Evidencia 1" }
         ],
-        "alumnos": ${formData.alumnos ? JSON.stringify(formData.alumnos.split('\n').filter(a => a.trim())) : '["Alumno 1", "Alumno 2", "Alumno 3"]'}
-    },
-    "referencias_bibliograficas": ["Referencia 1", "Referencia 2"]
-    ${formData.generarTeoria ? `,"teoria": {"titulo": "Título de la teoría", "contenido": "Contenido teórico completo y detallado del tema, con conceptos clave, reglas, biomecánica, historia breve, beneficios, etc. Mínimo 3 párrafos."}` : ''}
-    ${formData.generarFicha ? `,"ficha_aplicacion": {"titulo": "Ficha de Aplicación: ${formData.tema}", "preguntas": [${Array.from({ length: formData.numPreguntasFicha || 5 }, (_, i) => `{"numero": ${i + 1}, "pregunta": "Pregunta ${i + 1} relacionada con el tema", "tipo": ${i % 3 === 1 ? '"opcion_multiple", "opciones": ["a) Opción 1", "b) Opción 2", "c) Opción 3", "d) Opción 4"]' : '"abierta"'}}`).join(', ')}]}` : ''}
-}
-
-IMPORTANTE: 
-- Las actividades del desarrollo deben ser MUY detalladas, con instrucciones paso a paso.
-- Usa lenguaje pedagógico formal pero inspirador.
-- Las actividades deben ser 100% prácticas y motrices.
-- El estándar de aprendizaje debe ser COPIADO TEXTUALMENTE del que se te proporcionó arriba.
-- Si debes SUGERIR competencias, elige MÁXIMO 2 de las 3 existentes, las más pertinentes al tema.
-- La ficha de aplicación debe tener EXACTAMENTE ${formData.numPreguntasFicha || 5} preguntas, alternando tipos (abiertas y opción múltiple).
-- DEVUELVE SOLO EL JSON, sin ningún texto adicional antes o después.`;
+        "secuencia_didactica": {
+            "inicio": { "duracion": "15 min", "actividades": [{ "momento": "Nombre momento", "descripcion": "Descripción detallada", "recursos": "Materiales", "tiempo": "5m" }] },
+            "desarrollo": { "duracion": "60 min", "actividades": [{ "momento": "Nombre momento", "descripcion": "Descripción detallada", "recursos": "Materiales", "tiempo": "15m" }] },
+            "cierre": { "duracion": "15 min", "actividades": [{ "momento": "Nombre momento", "descripcion": "Descripción detallada", "recursos": "Materiales", "tiempo": "5m" }] }
+        },
+        "instrumento_evaluacion": {
+            "tipo": "${formData.instrumento}",
+            "criterios_instrumento": [{ "criterio": "Criterio de evaluación" }],
+            "alumnos": []
+        },
+        "teoria": ${formData.generarTeoria ? '{ "titulo": "Título de la Teoría", "contenido": "Genera AQUÍ todo el contenido técnico y pedagógico real..." }' : 'null'},
+        "ficha_aplicacion": ${formData.generarFicha ? '{ "preguntas": [ { "numero": 1, "pregunta": "Escribir pregunta real...", "opciones": ["Opción A", "Opción B", "Opción C"], "tipo": "cerrada" } ] }' : 'null'},
+        "referencias_bibliograficas": ["CNEB 2017", "Manual de Educación Física"]
+    }
+    
+    IMPORTANTE: Si 'teoria' o 'ficha_aplicacion' no son null, DEBES llenarlos con contenido REAL y COMPLETO. Prohibido usar el texto de ejemplo.`;
 
     try {
-        const result = await model.generateContent(prompt);
+        const fullModel = genAI.getGenerativeModel({ 
+            model: MODEL_NAME,
+            generationConfig: {
+                maxOutputTokens: 8192, // Máximo permitido para contenido extenso
+                temperature: 0.7,
+                responseMimeType: "application/json" // Fuerza a la IA a devolver un JSON válido
+            }
+        });
+
+        const result = await fullModel.generateContent(prompt);
         const response = await result.response;
-        let text = response.text();
+        const text = response.text().trim();
+        let cleanedText = text.trim();
+        // Limpieza de bloques de código markdown
+        cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/```\s*$/g, '').trim();
+        
+        try {
+            const parsed = JSON.parse(cleanedText);
+            
+            // Limpieza de seguridad
+            if (!formData.generarTeoria) {
+                parsed.teoria = null;
+            } else if (parsed.teoria && (parsed.teoria.contenido?.includes("REDACTAR") || (parsed.teoria.contenido || "").length < 50)) {
+                console.warn("La IA generó teoría muy corta o con placeholders.");
+            }
 
-        // Limpiar posibles marcadores de código
-        text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-
-        const parsed = JSON.parse(text);
-        return { success: true, data: parsed };
-    } catch (error) {
-        console.error("GEMINI STRUCTURED ERROR:", error.message);
-        return { success: false, error: error.message };
+            if (!formData.generarFicha) {
+                parsed.ficha_aplicacion = null;
+            }
+            
+            return { success: true, data: parsed };
+        } catch (parseError) {
+            console.error("JSON PARSE ERROR ORIGINAL TEXT:", text);
+            throw new Error("La IA generó un formato inválido. Intenta de nuevo o reduce el tamaño de la respuesta.");
+        }
+    } catch (e) {
+        console.error("Error en generateStructuredSession:", e);
+        return { success: false, error: "Error de IA: " + e.message };
     }
 };
 
-export const generateRubric = async (formData) => {
-    const prompt = `Eres un docente experto de Educación Física en Perú. Genera una RÚBRICA DE EVALUACIÓN analítica y detallada.
+export const generateStructuredAnnualPlan = async (formData) => {
 
-DATOS DE LA RÚBRICA:
-- Nivel: ${formData.nivel}
-- Grado: ${formData.grado}
-- Unidad/Tema: ${formData.tema}
-- Competencia principal: ${formData.competencia}
-- Capacidad priorizada: ${formData.capacidad || 'La más pertinente para el tema'}
+    const unidadesInfo = formData.unidades.map(u => {
+        // Enforce strictly one competency (the first one selected)
+        const comp = u.competencias[0] || 'Sin competencia';
+        return {
+            nro: u.id,
+            titulo: u.titulo,
+            competencia: comp
+        };
+    });
 
-Instrucciones:
-1. Crea de 3 a 5 criterios de evaluación (indicadores) específicos para el tema y grado.
-2. Cada criterio debe tener 4 niveles de logro:
-   - AD (Logro Destacado): Supera lo esperado.
-   - A (Logro Esperado): Cumple lo esperado.
-   - B (En Proceso): Está cerca de cumplirlo.
-   - C (En Inicio): Muestra dificultades.
-3. Las descripciones deben ser observables, medibles y redactadas en tercera persona del singular (ej. "Realiza...", "Demuestra...").
+    const prompt = `Actúa como un Especialista Curricular de Educación Física de alto nivel en Perú. Genera un PLAN CURRICULAR ANUAL de Educación Física siguiendo estrictamente esta estructura y usando los Datos Oficiales del CNEB proporcionados.
 
-RESPONDE ÚNICAMENTE con un JSON válido con esta estructura exacta:
+    DATOS OFICIALES CNEB (PROHIBIDO INVENTAR O CAMBIAR NOMBRES):
+    - CAPACIDADES POR COMPETENCIA: ${JSON.stringify(CNEB_CAPACIDADES)}
+    - ESTÁNDAR DEL CICLO ACTUAL: ${JSON.stringify(estandaresCiclo)}
+
+    ESTRUCTURA DEL PLAN:
+1. DATOS INFORMATIVOS: Copia fiel de los datos administrativos.
+2. DESCRIPCIÓN GENERAL Y ANÁLISIS DE LOS RESULTADOS DIAGNÓSTICOS:
+   2.1 Características de los estudiantes (basado en el diagnóstico: ${formData.diagnostico || 'No provisto'}).
+   2.2 Características del contexto (basado en el cartel de demandas: ${formData.contextoDemandas || 'No provisto'}).
+   2.3 Resultados de la evaluación diagnóstica (Escribe el marcador de posición exacto: "[El docente debe pegar aquí los resultados consolidados de su evaluación diagnóstica]").
+3. CALENDARIZACIÓN ESCOLAR: (Escribe el marcador: "[El docente debe complementar con el calendario oficial]").
+4. IDENTIFICACIÓN DE DEMANDAS Y NECESIDADES: (Escribe el marcador: "[El docente debe pegar aquí sus Carteles de Demandas]").
+5. PROPÓSITOS DE APRENDIZAJE: Lista las 3 competencias nacionales y sus capacidades oficiales.
+6. ORGANIZACIÓN DE LAS UNIDADES DIDÁCTICAS (MATRIZ): Planificación temporal.
+7. ESTÁNDARES Y DESEMPEÑOS PRECISADOS: Por cada competencia y grado. Usa el estándar del ciclo correspondiente.
+8. ENFOQUES TRANSVERSALES: Detalles con actitudes observables.
+9. TUTORÍA Y ORIENTACIÓN EDUCATIVA.
+10. MATERIALES Y RECURSOS.
+11. EVALUACIÓN (Escala CNEB).
+12. CIERRE Y FODA PEDAGÓGICO.
+
+UNIDADES PROVISTAS POR EL DOCENTE (REGLA DE ORO: USA ÚNICAMENTE ESTAS ${unidadesInfo.length} UNIDADES. PROHIBIDO AÑADIR O QUITAR UNIDADES):
+${JSON.stringify(unidadesInfo, null, 2)}
+
+ENFOQUES TRANSVERSALES SELECCIONADOS (REGLA DE ORO: DETALLAR ÚNICAMENTE ESTOS):
+${formData.enfoques.join(', ')}
+
+DIMENSIONES DE TUTORÍA: ${formData.dimensionesTutoria.join(', ')}
+ACTIVIDADES DE TUTORÍA PROVISTAS POR EL DOCENTE: ${formData.actividadesTutoria || 'No provistas. Genera en base a las dimensiones.'}
+
+RECURSOS Y MATERIALES PROVISTOS: ${formData.recursos || 'No provistos. Genera en base a Educación Física.'}
+
+REGLAS DE RIGUROSIDAD PEDAGÓGICA (NO NEGOCIABLES):
+1. MATRIZ DE UNIDADES (SECCIÓN 6): Debe contener exactamente ${unidadesInfo.length} unidades. No añadas unidades "de relleno".
+2. COMPETENCIAS Y CAPACIDADES: Usa estrictamente los nombres del bloque DATOS OFICIALES CNEB. No inventes capacidades como "comprende el desarrollo de la corporeidad". Usa "Comprende su cuerpo".
+3. CADA UNIDAD SOLO PUEDE TENER UNA COMPETENCIA.
+4. ESTÁNDARES (SECCIÓN 7): Redacta el estándar oficial del ciclo sin cambios.
+
+REGLAS DE CONTENIDO:
+- Usa los datos: IE: ${formData.ie}, Docente: ${formData.docente}, Grado: ${formData.grado}.
+- Los desempeños precisados (sección 7) deben ser específicos para el grado ${formData.grado} y alineados al CNEB.
+
+RESPONDE ÚNICAMENTE UN JSON CON ESTA ESTRUCTURA:
 {
-    "titulo": "Rúbrica de Evaluación: ${formData.tema}",
-    "criterios": [
-        {
-            "nombre": "Nombre del Criterio 1",
-            "descripciones": {
-                "AD": "Descripción para Logro Destacado",
-                "A": "Descripción para Logro Esperado",
-                "B": "Descripción para En Proceso",
-                "C": "Descripción para En Inicio"
-            }
+    "titulo_principal": "PLANIFICACIÓN CURRICULAR ANUAL ${formData.anio}",
+    "datos_informativos": { "ie": "${formData.ie}", "dre": "${formData.dre}", "ugel": "${formData.ugel}", "grado": "${formData.grado}", "seccion": "${formData.seccion}", "docente": "${formData.docente}", "director": "${formData.director}", "anio": "${formData.anio}", "nivel": "${formData.nivel}" },
+    "seccion_2_diagnostico": {
+        "caracteristicas_estudiantes": "...",
+        "caracteristicas_contexto": "...",
+        "resultados_espacio": "[Espacio para resultados]"
+    },
+    "seccion_3_calendarizacion": "[Espacio para calendario]",
+    "seccion_4_demandas": "[Espacio para cartel de demandas]",
+    "seccion_5_propositos": [
+        { "competencia": "nombre completo...", "capacidades": ["cap1", "cap2"] }
+    ],
+    "organizacion_unidades": [
+        { 
+            "nro": "1", 
+            "titulo": "...", 
+            "periodo": "I Bimestre/Trimestre", 
+            "competencia_nombre": "Nombre completo de la ÚNICA competencia",
+            "capacidades": ["Capacidad 1", "Capacidad 2"],
+            "enfoques": ["Enfoque X"] 
         }
-    ]
-}
-DEVUELVE SOLO EL JSON, sin ningún texto adicional antes o después.`;
+    ],
+    "estandares_desempenos": [
+        { "competencia": "...", "estandar": "...", "desempenos_precisados": "..." }
+    ],
+    "enfoques_transversales_detalle": [
+        { "enfoque": "...", "actitudes_docente": "...", "actitudes_estudiantes": "..." }
+    ],
+    "tutoria_orientacion": { "plan": "..." },
+    "materiales_recursos": { "estructuradas": [], "no_estructuradas": [] },
+    "evaluacion": { "escala": ["Listado de niveles de logro CNEB..."] },
+    "cierre": { 
+        "analisis_foda_pedagogico": { 
+            "fortalezas": ["Ítem de fortaleza real 1", "Ítem de fortaleza real 2", "Ítem de fortaleza real 3"], 
+            "oportunidades": ["Ítem de oportunidad real 1", "Ítem de oportunidad real 2", "Ítem de oportunidad real 3"], 
+            "debilidades": ["Ítem de debilidad real 1", "Ítem de debilidad real 2", "Ítem de debilidad real 3"], 
+            "amenazas": ["Ítem de amenaza real 1", "Ítem de amenaza real 2", "Ítem de amenaza real 3"] 
+        } 
+    }
+}`;
 
     try {
-        const result = await model.generateContent(prompt);
-        const response = await result.response;
-        let text = response.text();
-        text = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-        const parsed = JSON.parse(text);
+        const text = await generateAIContent(prompt);
+        let cleanedText = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        const parsed = JSON.parse(cleanedText);
         return { success: true, data: parsed };
-    } catch (error) {
-        console.error("GEMINI RUBRIC ERROR:", error.message);
-        return { success: false, error: error.message };
+    } catch (e) { 
+        console.error("Error en generateStructuredAnnualPlan:", e);
+        return { success: false, error: e.message }; 
+    }
+};
+
+export const generateExam = async (formData) => {
+    const prompt = `Genera un examen de Educación Física en JSON. Datos: ${JSON.stringify(formData)}`;
+    try {
+        const text = await generateAIContent(prompt);
+        let cleanedText = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        return { success: true, data: JSON.parse(cleanedText) };
+    } catch (e) { return { success: false, error: e.message }; }
+};
+
+const getGrados = (grado, planificarPor) => {
+    if (planificarPor === 'Ciclo') {
+        const cicloMap = {
+            'Ciclo II': '3, 4 y 5 años (Inicial)',
+            'Ciclo III': '1° y 2° Grado',
+            'Ciclo IV': '3° y 4° Grado',
+            'Ciclo V': '5° y 6° Grado',
+            'Ciclo VI': '1° y 2° de Secundaria',
+            'Ciclo VII': '3°, 4° y 5° de Secundaria'
+        };
+        return cicloMap[grado] || grado;
+    }
+    return grado;
+};
+
+export const generateStructuredUnit = async (formData) => {
+    const ciclo = getCiclo(formData.grado, formData.nivel);
+    const gradosAfectados = getGrados(formData.grado, formData.planificarPor);
+    const estandaresCiclo = CNEB_ESTANDARES[ciclo] || CNEB_ESTANDARES['Ciclo VI'];
+
+    const prompt = `Actúa como un Especialista en Currículo de Educación Física de Perú.
+    TAREA: Generar una UNIDAD DE APRENDIZAJE (Unidad Didáctica) completa, profunda y pedagógicamente coherente.
+
+    DATOS OFICIALES CNEB (PROHIBIDO INVENTAR):
+    - CAPACIDADES: ${JSON.stringify(CNEB_CAPACIDADES)}
+    - ESTÁNDAR DEL CICLO ACTUAL (${ciclo}): ${JSON.stringify(estandaresCiclo)}
+
+    REGLAS DE ORO (OBLIGATORIAS):
+    1. ALINEACIÓN CNEB: Usa estrictamente las competencias y capacidades oficiales del bloque DATOS OFICIALES CNEB. No inventes nombres alternativos.
+    2. TÍTULOS CORTOS: El título de la unidad y de cada sesión en la secuencia deben ser cortos y directos (máximo 8-10 palabras), para que no ocupen más de una fila.
+    3. SITUACIÓN SIGNIFICATIVA: Debe ser real, partir de la problemática: "${formData.contexto}". Debe incluir un RETO (preguntas desafiantes) y un PRODUCTO.
+    4. SECUENCIA DIDÁCTICA: Debe generar ${formData.duracion} sesiones (una por semana). Cada sesión debe tener título, propósito y criterios.
+    5. JUSTIFICACIÓN: Explica el "por qué" y "para qué" de la unidad basándose en las necesidades del estudiante de ${gradosAfectados}.
+
+    DATOS DE ENTRADA:
+    - Unidad: ${formData.tituloUnidad}
+    - Nivel: ${formData.nivel} | ${formData.planificarPor}: ${formData.grado}
+    - Duración: ${formData.duracion} semanas.
+    - Temas: ${formData.temasClave}
+    - Competencias a priorizar: ${formData.competencias.join(', ')}
+    - Enfoques seleccionados: ${formData.enfoques.join(', ')}
+
+    RESPONDE EXCLUSIVAMENTE CON UN OBJETO JSON SIGUIENDO ESTA ESTRUCTURA:
+    {
+        "titulo_unidad": "${formData.tituloUnidad || 'Nombre Creativo de la Unidad'}",
+        "datos_informativos": {
+            "docente": "${formData.docente}",
+            "ie": "${formData.ie}",
+            "director": "${formData.director}",
+            "nivel": "${formData.nivel}",
+            "area": "${formData.area}",
+            "ciclo_grado": "${formData.grado}",
+            "anio": "${formData.anio}",
+            "periodo": "${formData.periodo}",
+            "duracion": "${formData.duracion} semanas",
+            "fechas": "${formData.fechaInicio} al ...",
+            "num_estudiantes": "${formData.numEstudiantes}",
+            "turno": "${formData.turno}"
+        },
+        "justificacion": "Redacción pedagógica de la justificación de la unidad...",
+        "proposito_unidad": "Propósito general de aprendizaje...",
+        "situacion_significativa": "Redacción completa de la situación significativa con su reto...",
+        "producto_unidad": "${formData.productoFinal || 'Descripción del producto de la unidad'}",
+        "competencias_capacidades_estandar": [
+            {
+                "competencia": "Nombre completo",
+                "capacidades": ["Capacidad 1", "Capacidad 2"],
+                "estandar": "Texto del estándar del ${ciclo}",
+                "desempenos": ["Desempeño 1", "Desempeño 2"]
+            }
+        ],
+        "enfoques_transversales": [
+            { "enfoque": "Nombre", "valores": "...", "actitudes": "...", "actitud_docente": "..." }
+        ],
+        "secuencia_sesiones": [
+            { "semana": "Semana 1", "titulo": "...", "proposito": "...", "tiempo": "90 min" }
+        ],
+        "evaluacion": {
+            "criterios": ["Criterio 1", "Criterio 2"],
+            "evidencias": ["Evidencia 1"],
+            "instrumentos": ["Lista de Cotejo"]
+        },
+        "orientaciones_pedagogicas": "Recomendaciones para el docente...",
+        "referencias": ["CNEB 2017", "Cartilla de Planificación"]
+    }`;
+
+    try {
+        const fullModel = genAI.getGenerativeModel({ 
+            model: MODEL_NAME,
+            generationConfig: {
+                maxOutputTokens: 8192, // Aumentado para evitar cortes
+                temperature: 0.7,
+                responseMimeType: "application/json"
+            }
+        });
+
+        const result = await fullModel.generateContent(prompt);
+        const response = await result.response;
+        let text = response.text().trim();
+        
+        // Limpieza de seguridad para bloques de código JSON
+        text = text.replace(/^```json\s*/i, '').replace(/```\s*$/g, '').trim();
+
+        try {
+            const parsed = JSON.parse(text);
+            return { success: true, data: parsed };
+        } catch (parseError) {
+            console.error("JSON PARSE ERROR EN UNIDAD:", text);
+            throw new Error("La IA generó un formato incompleto. Por favor, intenta de nuevo.");
+        }
+    } catch (e) {
+        console.error("Error en generateStructuredUnit:", e);
+        return { success: false, error: "Error de IA: " + e.message };
+    }
+};
+
+
+
+export const generateDiagnosticEvaluation = async (formData) => {
+    const ciclo = formData.ciclo || getCiclo(formData.grado, formData.nivel);
+    const prompt = `Actúa como un Especialista Curricular de Educación Física de Perú. 
+    TAREA: Generar una EVALUACIÓN DIAGNÓSTICA integral alineada al CNEB.
+
+    DATOS PROVISTOS POR EL DOCENTE:
+    - Grado: ${formData.grado}
+    - Sección: ${formData.seccion}
+    - Ciclo: ${ciclo}
+    - Contexto del Entorno: ${formData.contexto}
+    - Problemática o Interés: ${formData.problematica}
+    - Duración Estimada: ${formData.duracion}
+    - Estudiantes: ${formData.alumnos || 'No provistos'}
+
+    REGLAS PEDAGÓGICAS (OBLIGATORIAS):
+    1. Incluir las 3 COMPETENCIAS del área: "Se desenvuelve...", "Asume..." e "Interactúa...".
+    2. SITUACIÓN SIGNIFICATIVA: Debe ser un RETO (desafío) motivador diseñado para que el alumno use sus habilidades motrices, cuide su salud y juegue en equipo.
+    3. CRITERIOS DE EVALUACIÓN: Listar desempeños precisados reales para ${formData.grado} grado.
+    4. INSTRUMENTO: Generar una Lista de Cotejo o Rúbrica con criterios extraídos de los desempeños.
+    5. CONCLUSIONES Y RESULTADOS ESPERADOS: Redactar una sección de conclusiones pedagógicas sobre lo que se espera lograr y cómo los resultados ayudarán a la planificación anual.
+
+    RESPONDE EXCLUSIVAMENTE CON UN OBJETO JSON SIGUIENDO ESTA ESTRUCTURA:
+    {
+        "datos_generales": {
+            "grado": "${formData.grado}",
+            "seccion": "${formData.seccion}",
+            "ciclo": "${ciclo}",
+            "docente": "${formData.docente || 'Docente'}",
+            "institucion": "${formData.ie || 'I.E.'}"
+        },
+        "proposito_evaluacion": "Redactar el propósito aquí...",
+        "competencias_capacidades": [
+            { "competencia": "Se desenvuelve de manera autónoma a través de su motricidad", "capacidades": ["Comprende su cuerpo", "Se expresa corporalmente"] },
+            { "competencia": "Asume una vida saludable", "capacidades": ["Comprende las relaciones entre la actividad física, alimentación, postura e higiene personal y del ambiente, y la salud", "Incorpora prácticas que mejoran su calidad de vida"] },
+            { "competencia": "Interactúa a través de sus habilidades sociomotrices", "capacidades": ["Se relaciona utilizando sus habilidades sociomotrices", "Crea y aplica estrategias y tácticas de juego"] }
+        ],
+        "situacion_significativa": {
+            "titulo": "Título del reto",
+            "descripcion": "Descripción detallada del reto diagnóstico aquí..."
+        },
+        "criterios_evaluacion": [
+            { "competencia": "...", "criterios": ["Criterio precisado 1", "Criterio precisado 2"] }
+        ],
+        "evidencias_aprendizaje": "Descripción del producto o actuación",
+        "conclusiones_resultados": "Redactar conclusiones pedagógicas detalladas aquí...",
+        "secuencia_sesiones": [
+            { "sesion": 1, "titulo": "Nombre de la sesión de evaluación 1", "actividad": "Descripción breve de la actividad principal" }
+        ],
+        "instrumento_recojo": {
+            "tipo": "Lista de Cotejo",
+            "columnas": ["N°", "Estudiantes", "Criterio 1", "Criterio 2", "Criterio 3"],
+            "alumnos": ["Estudiante 1", "Estudiante 2"] 
+        }
+    }`;
+
+    try {
+        const text = await generateAIContent(prompt);
+        let cleanedText = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        return { success: true, data: JSON.parse(cleanedText) };
+    } catch (e) {
+        console.error("Error en generateDiagnosticEvaluation:", e);
+        return { success: false, error: e.message };
     }
 };

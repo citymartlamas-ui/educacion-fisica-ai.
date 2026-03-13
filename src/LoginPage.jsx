@@ -1,14 +1,28 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Lock, User, Eye, EyeOff, Dumbbell, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, User, Eye, EyeOff, Activity, ArrowLeft, X, AlertTriangle } from 'lucide-react';
+
 import { useAuth } from './AuthContext';
 
 function LoginPage({ onNavigate }) {
-    const { login, loginWithGoogle, register } = useAuth();
+    const { login, loginWithGoogle, register, deviceError, setDeviceError, user, isChecking } = useAuth();
     const [isRegister, setIsRegister] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    React.useEffect(() => {
+        setError('');
+    }, [isRegister]);
+
+    // Navegación reactiva: Solo ir a home si hay usuario y NO hay error de dispositivos Y terminó de validar
+    React.useEffect(() => {
+        if (user && !deviceError && !isChecking) {
+            onNavigate('home');
+        }
+    }, [user, deviceError, isChecking, onNavigate]);
+
+
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -22,6 +36,7 @@ function LoginPage({ onNavigate }) {
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
+        if (setDeviceError) setDeviceError(null);
         setLoading(true);
 
         try {
@@ -35,7 +50,7 @@ function LoginPage({ onNavigate }) {
             } else {
                 await login(formData.email, formData.password);
             }
-            onNavigate('home');
+            // No navegamos aquí, esperamos al useEffect reactivo
         } catch (err) {
             const messages = {
                 'auth/email-already-in-use': 'Este correo ya está registrado.',
@@ -53,16 +68,19 @@ function LoginPage({ onNavigate }) {
 
     const handleGoogleLogin = async () => {
         setError('');
+        if (setDeviceError) setDeviceError(null);
         setLoading(true);
+
         try {
             await loginWithGoogle();
-            onNavigate('home');
+            // No navegamos aquí, esperamos al useEffect reactivo
         } catch (err) {
             setError('Error con Google: ' + err.message);
         } finally {
             setLoading(false);
         }
     };
+
 
     return (
         <motion.div
@@ -96,17 +114,18 @@ function LoginPage({ onNavigate }) {
                     {/* Header */}
                     <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                         <div style={{
-                            width: '56px',
-                            height: '56px',
-                            background: 'linear-gradient(135deg, var(--color-primary), var(--color-secondary))',
+                            width: '64px',
+                            height: '64px',
+                            background: 'rgba(255,255,255,0.05)',
                             borderRadius: 'var(--radius-md)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             margin: '0 auto 1rem',
-                            color: 'var(--color-bg)'
+                            overflow: 'hidden',
+                            border: '1px solid var(--glass-border)'
                         }}>
-                            <Dumbbell size={28} />
+                            <img src="/pwa-192x192.png" alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         </div>
                         <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem' }}>
                             {isRegister ? 'Crear Cuenta' : 'Bienvenido'}
@@ -115,6 +134,54 @@ function LoginPage({ onNavigate }) {
                             {isRegister ? 'Únete a la comunidad de docentes' : 'Ingresa a tu cuenta'}
                         </p>
                     </div>
+
+                    {/* Mensajes de Validación, Error y Advertencia */}
+                    {isChecking && (
+                        <div style={{
+                            background: 'rgba(52, 211, 153, 0.1)',
+                            border: '1px solid var(--color-primary)',
+                            padding: '1rem',
+                            borderRadius: 'var(--radius-md)',
+                            marginBottom: '1.5rem',
+                            color: 'var(--color-primary)',
+                            fontSize: '0.9rem',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.8rem'
+                        }}>
+                            <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1 }}>
+                                <Activity size={18} />
+                            </motion.div>
+                            <span>Verificando seguridad y dispositivos...</span>
+                        </div>
+                    )}
+
+                    {(error || deviceError) && !isChecking && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            style={{
+                                background: deviceError ? 'rgba(251, 191, 36, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                                border: deviceError ? '1px solid #fbbf24' : '1px solid var(--color-error)',
+                                padding: '1rem',
+                                borderRadius: 'var(--radius-md)',
+                                marginBottom: '1.5rem',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '1rem',
+                                color: 'white',
+                                fontSize: '0.9rem',
+                                lineHeight: '1.4'
+                            }}
+                        >
+                            <div style={{ color: deviceError ? '#fbbf24' : 'var(--color-error)', flexShrink: 0 }}>
+                                {deviceError ? <AlertTriangle size={20} /> : <X size={20} />}
+                            </div>
+                            <div style={{ flex: 1 }}>{deviceError || error}</div>
+                        </motion.div>
+                    )}
+
+
 
                     {/* Google Button */}
                     <button

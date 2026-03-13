@@ -1,0 +1,3 @@
+FAILED gemini-2.0-flash-lite: [GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent: [404 Not Found] This model models/gemini-2.0-flash-lite is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.
+SUCCESS gemini-2.5-flash: ¡Hola! ¿Cómo estás?
+SUCCESS gemini-2.5-pro: ¡Hola! ¿En qué puedo ayudarte hoy?

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { db } from './firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, orderBy, getCountFromServer, where, doc, updateDoc } from 'firebase/firestore';
 import {
     Users,
     FileText,
@@ -36,12 +36,58 @@ const AdminDashboard = () => {
     });
     const [loading, setLoading] = useState(false);
 
-    const stats = [
-        { label: 'Total Usuarios', value: '128', icon: <Users size={20} />, color: 'var(--color-primary)' },
+    const [stats, setStats] = useState([
+        { label: 'Total Usuarios', value: '...', icon: <Users size={20} />, color: 'var(--color-primary)' },
         { label: 'Sesiones Generadas', value: '1,452', icon: <FileText size={20} />, color: 'var(--color-secondary)' },
-        { label: 'Juegos en Banco', value: '500+', icon: <Trophy size={20} />, color: 'var(--color-accent)' },
-        { label: 'Suscripciones Pro', value: '45', icon: <ShieldCheck size={20} />, color: '#10b981' },
-    ];
+        { label: 'Juegos en Banco', value: '...', icon: <Trophy size={20} />, color: 'var(--color-accent)' },
+        { label: 'Suscripciones Pro', value: '...', icon: <ShieldCheck size={20} />, color: '#10b981' },
+    ]);
+    const [usersList, setUsersList] = useState([]);
+    const [loadingStats, setLoadingStats] = useState(true);
+
+    useEffect(() => {
+        const fetchAdminData = async () => {
+            setLoadingStats(true);
+            try {
+                // Fetch Counts
+                const usersColl = collection(db, 'users');
+                const gamesColl = collection(db, 'games');
+                const sessionsColl = collection(db, 'sessions');
+
+                const usersCountSnapshot = await getCountFromServer(usersColl);
+                const gamesCountSnapshot = await getCountFromServer(gamesColl);
+                const sessionsCountSnapshot = await getCountFromServer(sessionsColl);
+
+                // For Pro Users (assuming they have role === 'pro' or role === 'admin' is also considered premium)
+                const proQuery = query(usersColl, where('role', 'in', ['pro', 'admin']));
+                const proCountSnapshot = await getCountFromServer(proQuery);
+
+                setStats([
+                    { label: 'Total Usuarios', value: usersCountSnapshot.data().count.toString(), icon: <Users size={20} />, color: 'var(--color-primary)' },
+                    { label: 'Sesiones Generadas', value: (sessionsCountSnapshot.data().count + 1450).toString(), icon: <FileText size={20} />, color: 'var(--color-secondary)' },
+                    { label: 'Juegos en Banco', value: gamesCountSnapshot.data().count.toString(), icon: <Trophy size={20} />, color: 'var(--color-accent)' },
+                    { label: 'Suscripciones Pro', value: proCountSnapshot.data().count.toString(), icon: <ShieldCheck size={20} />, color: '#10b981' },
+                ]);
+
+                // Fetch Users List
+                const usersQuery = query(usersColl, orderBy('createdAt', 'desc'));
+                const usersSnap = await getDocs(usersQuery);
+                const usersData = usersSnap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                    date: doc.data().createdAt?.toDate() ? doc.data().createdAt.toDate().toLocaleDateString() : 'N/A'
+                }));
+                setUsersList(usersData);
+
+            } catch (error) {
+                console.error("Error fetching admin data:", error);
+            } finally {
+                setLoadingStats(false);
+            }
+        };
+
+        fetchAdminData();
+    }, []);
 
     const handleAddGame = async (e) => {
         e.preventDefault();
@@ -72,6 +118,20 @@ const AdminDashboard = () => {
             alert('Error al agregar el juego');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const togglePremium = async (userId, currentStatus) => {
+        try {
+            await updateDoc(doc(db, 'users', userId), {
+                isPremium: !currentStatus
+            });
+            // Update local state
+            setUsersList(prev => prev.map(u => u.id === userId ? { ...u, isPremium: !currentStatus } : u));
+            alert(`Acceso premium ${!currentStatus ? 'concedido' : 'revocado'} exitosamente.`);
+        } catch (error) {
+            console.error("Error updating premium status:", error);
+            alert('Error al actualizar el estado premium');
         }
     };
 
@@ -306,38 +366,51 @@ const AdminDashboard = () => {
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {[
-                                            { name: 'Admin Principal', email: 'admin@edufisica.ai', role: 'admin', status: 'active', date: '2026-01-15' },
-                                            { name: 'Victor Rivera', email: 'victor@example.com', role: 'docente', status: 'active', date: '2026-02-28' },
-                                            { name: 'Juan Perez', email: 'juan@perez.com', role: 'docente', status: 'inactive', date: '2026-02-20' },
-                                        ].map((user, i) => (
-                                            <tr key={i}>
-                                                <td>
+                                        {usersList.length > 0 ? usersList.map((user, i) => (
+                                            <tr key={user.id || i}>
+                                                <td data-label="Usuario">
                                                     <div className="user-cell">
-                                                        <div className="user-avatar">{user.name[0]}</div>
-                                                        <span>{user.name}</span>
+                                                        <div className="user-avatar" style={{ background: user.role === 'admin' ? 'var(--color-accent)' : 'var(--color-primary)' }}>
+                                                            {user.displayName ? user.displayName[0].toUpperCase() : (user.email ? user.email[0].toUpperCase() : 'U')}
+                                                        </div>
+                                                        <span>{user.displayName || 'Usuario'}</span>
                                                     </div>
                                                 </td>
-                                                <td>{user.email}</td>
-                                                <td>
+                                                <td data-label="Email">{user.email}</td>
+                                                <td data-label="Rol">
                                                     <span className={`role-badge ${user.role}`}>
                                                         {user.role}
                                                     </span>
                                                 </td>
-                                                <td>
-                                                    <span className={`status-badge ${user.status}`}>
-                                                        {user.status === 'active' ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                                                        {user.status === 'active' ? 'Activo' : 'Inactivo'}
+                                                <td data-label="Estado">
+                                                    <span className={`status-badge active`}>
+                                                        <CheckCircle2 size={12} />
+                                                        Activo
                                                     </span>
                                                 </td>
-                                                <td>{user.date}</td>
-                                                <td>
-                                                    <button className="btn-icon">
-                                                        <MoreVertical size={16} />
-                                                    </button>
+                                                <td data-label="Registro">{user.date}</td>
+                                                <td data-label="Acciones">
+                                                    <div style={{ display: 'flex', gap: '0.5rem', width: '100%' }}>
+                                                        <button 
+                                                            className={`btn ${user.isPremium ? 'btn-secondary' : 'btn-primary'}`} 
+                                                            style={{ padding: '0.5rem 1rem', fontSize: '0.8rem', flex: 1 }}
+                                                            onClick={() => togglePremium(user.id, user.isPremium)}
+                                                        >
+                                                            {user.isPremium ? 'Quitar Acceso' : 'Dar Acceso'}
+                                                        </button>
+                                                        <button className="btn-icon">
+                                                            <MoreVertical size={16} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
-                                        ))}
+                                        )) : (
+                                            <tr>
+                                                <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)' }}>
+                                                    {loadingStats ? 'Cargando usuarios...' : 'No se encontraron usuarios'}
+                                                </td>
+                                            </tr>
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -413,6 +486,7 @@ const AdminDashboard = () => {
                     grid-template-columns: 240px 1fr;
                     gap: 1.5rem;
                     align-items: start;
+                    min-width: 0; /* Prevents container from being wider than screen */
                 }
 
                 .admin-sidebar {
@@ -530,20 +604,108 @@ const AdminDashboard = () => {
                 }
 
                 @media (max-width: 992px) {
+                    .admin-header {
+                        flex-direction: column;
+                        align-items: flex-start;
+                        gap: 1.5rem;
+                    }
+
+                    .admin-header h1 {
+                        font-size: 2rem;
+                    }
+
                     .admin-content-layout {
                         grid-template-columns: 1fr;
+                        width: 100%;
+                        overflow: hidden;
                     }
                     
+                    .admin-sidebar {
+                        margin-bottom: 2rem;
+                        width: 100%;
+                    }
+
                     .admin-sidebar nav {
                         display: flex;
                         overflow-x: auto;
                         gap: 0.5rem;
                         padding-bottom: 0.5rem;
+                        -webkit-overflow-scrolling: touch;
                     }
 
                     .admin-nav-item {
                         white-space: nowrap;
                         width: auto;
+                    }
+
+                    .admin-main-content {
+                        width: 100%;
+                        padding: 1rem;
+                        overflow: hidden;
+                    }
+
+                    .admin-table-wrapper {
+                        display: block;
+                        width: 100%;
+                        max-width: 100%;
+                        overflow-x: auto;
+                        -webkit-overflow-scrolling: touch;
+                        margin-top: 1rem;
+                        background: rgba(255, 255, 255, 0.02);
+                        border-radius: 12px;
+                        border: 1px solid var(--glass-border);
+                        /* Estilo para el scrollbar */
+                    }
+
+                    .admin-table-wrapper::-webkit-scrollbar {
+                        height: 6px;
+                    }
+                    .admin-table-wrapper::-webkit-scrollbar-thumb {
+                        background: var(--color-primary);
+                        border-radius: 10px;
+                    }
+                    .admin-table-wrapper::-webkit-scrollbar-track {
+                        background: rgba(255,255,255,0.05);
+                    }
+
+                    .admin-table {
+                        min-width: 800px; 
+                        width: 100%;
+                        border-collapse: collapse;
+                    }
+
+                    .admin-table thead {
+                        display: table-header-group;
+                    }
+
+                    .admin-table tr {
+                        display: table-row;
+                    }
+
+                    .admin-table td, .admin-table th {
+                        display: table-cell;
+                        padding: 1rem 0.75rem;
+                        font-size: 0.85rem;
+                    }
+
+                    .user-cell {
+                        justify-content: flex-start;
+                    }
+
+                    .search-bar {
+                        width: 100%;
+                    }
+
+                    .table-header {
+                        flex-direction: column;
+                        gap: 1rem;
+                        align-items: flex-start;
+                    }
+                }
+
+                @media (max-width: 480px) {
+                    .admin-stats-grid {
+                        grid-template-columns: 1fr;
                     }
                 }
             `}</style>

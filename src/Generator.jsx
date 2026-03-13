@@ -6,251 +6,274 @@ import {
     GraduationCap, BookOpen, Clock, Package, Building2, User, FileText, RefreshCw, Wand2
 } from 'lucide-react';
 import { generateStructuredSession, model } from './gemini';
+import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, BorderStyle, HeadingLevel, ShadingType } from 'docx';
+import { saveAs } from 'file-saver';
+import { db } from './firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 // ==================== WORD EXPORT ====================
 const exportToWord = async (data) => {
-    const { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, BorderStyle, HeadingLevel, ShadingType } = await import('docx');
-    const { saveAs } = await import('file-saver');
+    try {
 
-    const borderStyle = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
-    const cellBorders = { top: borderStyle, bottom: borderStyle, left: borderStyle, right: borderStyle };
+        const borderStyle = { style: BorderStyle.SINGLE, size: 1, color: '000000' };
+        const cellBorders = { top: borderStyle, bottom: borderStyle, left: borderStyle, right: borderStyle };
 
-    const headerShading = { type: ShadingType.SOLID, color: '1a56db', fill: '1a56db' };
-    const subHeaderShading = { type: ShadingType.SOLID, color: 'e8f0fe', fill: 'e8f0fe' };
+        const headerShading = { type: ShadingType.SOLID, color: '1a56db', fill: '1a56db' };
+        const subHeaderShading = { type: ShadingType.SOLID, color: 'e8f0fe', fill: 'e8f0fe' };
 
-    const makeHeaderCell = (text, colSpan = 1) => new TableCell({
-        children: [new Paragraph({ children: [new TextRun({ text, bold: true, color: 'ffffff', size: 20, font: 'Calibri' })], alignment: AlignmentType.CENTER })],
-        shading: headerShading,
-        borders: cellBorders,
-        columnSpan: colSpan,
-        verticalAlign: 'center',
-    });
+        const makeHeaderCell = (text, colSpan = 1) => new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: (text || '').toString(), bold: true, color: 'ffffff', size: 20, font: 'Calibri' })], alignment: AlignmentType.CENTER })],
+            shading: headerShading,
+            borders: cellBorders,
+            columnSpan: colSpan,
+            verticalAlign: 'center',
+        });
 
-    const makeSubHeaderCell = (text, colSpan = 1) => new TableCell({
-        children: [new Paragraph({ children: [new TextRun({ text, bold: true, size: 18, font: 'Calibri' })], alignment: AlignmentType.LEFT })],
-        shading: subHeaderShading,
-        borders: cellBorders,
-        columnSpan: colSpan,
-        verticalAlign: 'center',
-    });
+        const makeSubHeaderCell = (text, colSpan = 1) => new TableCell({
+            children: [new Paragraph({ children: [new TextRun({ text: (text || '').toString(), bold: true, size: 18, font: 'Calibri' })], alignment: AlignmentType.LEFT })],
+            shading: subHeaderShading,
+            borders: cellBorders,
+            columnSpan: colSpan,
+            verticalAlign: 'center',
+        });
 
-    const makeCell = (text, colSpan = 1, bold = false) => new TableCell({
-        children: [new Paragraph({ children: [new TextRun({ text: text || '', bold, size: 18, font: 'Calibri' })], spacing: { before: 40, after: 40 } })],
-        borders: cellBorders,
-        columnSpan: colSpan,
-        verticalAlign: 'center',
-    });
+        const makeTextRuns = (str, bold = false) => {
+            const text = (str == null ? '' : str).toString();
+            const runs = [];
+            text.split('\n').forEach((line, index) => {
+                if (index > 0) runs.push(new TextRun({ break: 1 }));
+                runs.push(new TextRun({ text: line, size: 18, font: 'Calibri', bold }));
+            });
+            return runs;
+        };
 
-    const d = data.datos_informativos;
-    const p = data.propositos_aprendizaje;
+        const makeCell = (text, colSpan = 1, bold = false) => new TableCell({
+            children: [new Paragraph({ children: makeTextRuns(text, bold), spacing: { before: 40, after: 40 } })],
+            borders: cellBorders,
+            columnSpan: colSpan,
+            verticalAlign: 'center',
+        });
 
-    // --- DATOS INFORMATIVOS ---
-    const datosTable = new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [
-            new TableRow({ children: [makeHeaderCell('I. DATOS INFORMATIVOS', 4)] }),
-            new TableRow({ children: [makeSubHeaderCell('Docente'), makeCell(d.docente, 1), makeSubHeaderCell('I.E.'), makeCell(d.ie, 1)] }),
-            new TableRow({ children: [makeSubHeaderCell('Director(a)'), makeCell(d.director, 1), makeSubHeaderCell('DRE'), makeCell(d.dre, 1)] }),
-            new TableRow({ children: [makeSubHeaderCell('UGEL'), makeCell(d.ugel, 1), makeSubHeaderCell('Nivel'), makeCell(d.nivel, 1)] }),
-            new TableRow({ children: [makeSubHeaderCell('Grado y Sección'), makeCell(d.grado, 1), makeSubHeaderCell('Área'), makeCell(d.area, 1)] }),
-            new TableRow({ children: [makeSubHeaderCell('Tema/Actividad'), makeCell(d.tema, 3)] }),
-            new TableRow({ children: [makeSubHeaderCell('Duración'), makeCell(d.duracion, 1), makeSubHeaderCell('Fecha'), makeCell(d.fecha, 1)] }),
-        ]
-    });
+        const d = data.datos_informativos || {};
+        const p = data.propositos_aprendizaje || {};
 
-    // --- PROPÓSITOS ---
-    const propositosRows = [
-        new TableRow({ children: [makeHeaderCell('II. PROPÓSITOS DE APRENDIZAJE', 4)] }),
-        new TableRow({ children: [makeSubHeaderCell('COMPETENCIA'), makeSubHeaderCell('CAPACIDADES'), makeSubHeaderCell('ESTÁNDAR DE APRENDIZAJE (CNEB)'), makeSubHeaderCell('EVIDENCIA')] }),
-    ];
-
-    (p.competencias || []).forEach(comp => {
-        propositosRows.push(new TableRow({
-            children: [
-                makeCell(comp.nombre),
-                makeCell((comp.capacidades || []).map((c, i) => `${i + 1}. ${c}`).join('\n')),
-                makeCell(comp.estandar || ''),
-                makeCell(data.evidencia_aprendizaje || ''),
+        // --- DATOS INFORMATIVOS ---
+        const datosTable = new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+                new TableRow({ children: [makeHeaderCell('II. DATOS INFORMATIVOS', 4)] }),
+                new TableRow({ children: [makeSubHeaderCell('Docente'), makeCell(d.docente || '-'), makeSubHeaderCell('I.E.'), makeCell(d.ie || '-')] }),
+                new TableRow({ children: [makeSubHeaderCell('Director(a)'), makeCell(d.director || '-'), makeSubHeaderCell('Nivel'), makeCell(d.nivel || '-')] }),
+                new TableRow({ children: [makeSubHeaderCell('Grado y Sección'), makeCell(d.grado || '-'), makeSubHeaderCell('Área'), makeCell(d.area || '-')] }),
+                new TableRow({ children: [makeSubHeaderCell('Tema/Actividad'), makeCell(d.tema || '-', 3)] }),
+                new TableRow({ children: [makeSubHeaderCell('Duración'), makeCell(d.duracion || '-'), makeSubHeaderCell('Fecha'), makeCell(d.fecha || '-')] }),
             ]
-        }));
-    });
+        });
 
-    propositosRows.push(new TableRow({ children: [makeSubHeaderCell('Competencia Transversal'), makeCell(p.competencia_transversal, 3)] }));
-    propositosRows.push(new TableRow({ children: [makeSubHeaderCell('Enfoque Transversal'), makeCell(p.enfoque_transversal, 1), makeSubHeaderCell('Valor / Actitud'), makeCell(`${p.valor || ''} / ${p.actitud || ''}`, 1)] }));
+        // --- PROPÓSITOS ---
+        const propositosRows = [
+            new TableRow({ children: [makeHeaderCell('III. PROPÓSITOS DE APRENDIZAJE', 4)] }),
+            new TableRow({ children: [
+                makeSubHeaderCell('COMPETENCIA'), 
+                makeSubHeaderCell('CAPACIDADES'), 
+                makeSubHeaderCell('ESTÁNDAR / DESEMPEÑOS', 2)
+            ] }),
+        ];
 
-    const propositosTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: propositosRows });
-
-    // --- SITUACIÓN SIGNIFICATIVA ---
-    const situacionTable = new Table({
-        width: { size: 100, type: WidthType.PERCENTAGE },
-        rows: [
-            new TableRow({ children: [makeHeaderCell('III. SITUACIÓN SIGNIFICATIVA / RETO', 1)] }),
-            new TableRow({ children: [makeCell(data.situacion_significativa)] }),
-        ]
-    });
-
-    // --- CRITERIOS DE EVALUACIÓN ---
-    const criteriosRows = [
-        new TableRow({ children: [makeHeaderCell('IV. CRITERIOS DE EVALUACIÓN', 2)] }),
-        new TableRow({ children: [makeSubHeaderCell('CRITERIO'), makeSubHeaderCell('EVIDENCIA')] }),
-    ];
-    (data.criterios_evaluacion || []).forEach(c => {
-        criteriosRows.push(new TableRow({ children: [makeCell(c.criterio), makeCell(c.evidencia)] }));
-    });
-    const criteriosTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: criteriosRows });
-
-    // --- SECUENCIA DIDÁCTICA ---
-    const secRows = [
-        new TableRow({ children: [makeHeaderCell('V. SECUENCIA DIDÁCTICA', 4)] }),
-        new TableRow({ children: [makeSubHeaderCell('MOMENTO'), makeSubHeaderCell('ACTIVIDAD / ESTRATEGIA'), makeSubHeaderCell('RECURSOS'), makeSubHeaderCell('TIEMPO')] }),
-    ];
-
-    const addPhase = (phaseName, phase, color) => {
-        const phaseShading = { type: ShadingType.SOLID, color, fill: color };
-        secRows.push(new TableRow({
-            children: [
-                new TableCell({
-                    children: [new Paragraph({ children: [new TextRun({ text: `${phaseName} (${phase.duracion})`, bold: true, color: 'ffffff', size: 18, font: 'Calibri' })], alignment: AlignmentType.CENTER })],
-                    shading: phaseShading, borders: cellBorders, columnSpan: 4, verticalAlign: 'center'
-                })
-            ]
-        }));
-        (phase.actividades || []).forEach(act => {
-            secRows.push(new TableRow({
+        (p.competencias || []).forEach(comp => {
+            const desempenosText = Array.isArray(comp.desempeños) ? comp.desempeños.join('\n') : (comp.desempeños || '');
+            propositosRows.push(new TableRow({
                 children: [
-                    makeCell(act.momento, 1, true),
-                    makeCell(act.descripcion),
-                    makeCell(act.recursos || ''),
-                    makeCell(act.tiempo || ''),
+                    makeCell(comp.nombre),
+                    makeCell((comp.capacidades || []).map((c, i) => `• ${c}`).join('\n')),
+                    makeCell(`ESTÁNDAR:\n${comp.estandar || '-'}\n\nDESEMPEÑOS:\n${desempenosText}`, 2),
                 ]
             }));
         });
-    };
 
-    addPhase('INICIO', data.secuencia_didactica.inicio, '27ae60');
-    addPhase('DESARROLLO', data.secuencia_didactica.desarrollo, '2980b9');
-    addPhase('CIERRE', data.secuencia_didactica.cierre, 'e74c3c');
+        propositosRows.push(new TableRow({ children: [makeSubHeaderCell('Competencia Transversal'), makeCell(p.competencia_transversal || '-', 3)] }));
+        propositosRows.push(new TableRow({ children: [makeSubHeaderCell('Enfoque Transversal'), makeCell(p.enfoque_transversal || '-', 1), makeSubHeaderCell('Valor / Actitud'), makeCell(`${p.valor || ''} / ${p.actitud || ''}`, 1)] }));
 
-    const secuenciaTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: secRows });
-
-    // --- INSTRUMENTO DE EVALUACIÓN ---
-    const inst = data.instrumento_evaluacion;
-    const instHeaderRow = [makeSubHeaderCell('N°'), makeSubHeaderCell('APELLIDOS Y NOMBRES')];
-    (inst.criterios_instrumento || []).forEach((c, i) => {
-        instHeaderRow.push(makeSubHeaderCell(`C${i + 1}`));
-    });
-
-    const instRows = [
-        new TableRow({ children: [makeHeaderCell(`VI. INSTRUMENTO DE EVALUACIÓN: ${inst.tipo}`, 2 + (inst.criterios_instrumento || []).length)] }),
-    ];
-
-    // Fila de leyenda de criterios
-    const criteriosLeyenda = (inst.criterios_instrumento || []).map((c, i) => `C${i + 1}: ${c.criterio}`).join(' | ');
-    instRows.push(new TableRow({ children: [makeCell(criteriosLeyenda, 2 + (inst.criterios_instrumento || []).length)] }));
-
-    instRows.push(new TableRow({ children: instHeaderRow }));
-
-    (inst.alumnos || []).forEach((alumno, idx) => {
-        const row = [makeCell(`${idx + 1}`), makeCell(alumno)];
-        (inst.criterios_instrumento || []).forEach(() => row.push(makeCell('')));
-        instRows.push(new TableRow({ children: row }));
-    });
-
-    const instrumentoTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: instRows });
-
-    // --- DOCUMENT ---
-    const sections = [
-        new Paragraph({ text: data.titulo || 'SESIÓN DE APRENDIZAJE', heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, spacing: { after: 200 } }),
-        datosTable,
-        new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
-        propositosTable,
-        new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
-        new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [
-                new TableRow({ children: [makeHeaderCell('PROPÓSITO DE LA SESIÓN', 1)] }),
-                new TableRow({ children: [makeCell(data.proposito_sesion)] }),
-            ]
-        }),
-        new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
-        situacionTable,
-        new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
-        criteriosTable,
-        new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
-        secuenciaTable,
-        new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
-        instrumentoTable,
-    ];
-
-    // Teoría
-    if (data.teoria) {
-        sections.push(new Paragraph({ text: '', spacing: { before: 200, after: 200 } }));
-        sections.push(new Table({
-            width: { size: 100, type: WidthType.PERCENTAGE },
-            rows: [
-                new TableRow({ children: [makeHeaderCell('VII. TEORÍA DEL TEMA', 1)] }),
-                new TableRow({ children: [makeCell(data.teoria.contenido)] }),
-            ]
-        }));
-    }
-
-    // Ficha
-    if (data.ficha_aplicacion) {
-        sections.push(new Paragraph({ text: '', spacing: { before: 200, after: 200 } }));
-        const fichaRows = [new TableRow({ children: [makeHeaderCell('VIII. FICHA DE APLICACIÓN', 1)] })];
-        (data.ficha_aplicacion.preguntas || []).forEach(p => {
-            let texto = `${p.numero}. ${p.pregunta}`;
-            if (p.opciones) texto += '\n' + p.opciones.join('\n');
-            fichaRows.push(new TableRow({ children: [makeCell(texto)] }));
+        const propositosTable = new Table({ 
+            width: { size: 100, type: WidthType.PERCENTAGE }, 
+            rows: propositosRows,
+            columnWidths: [2500, 2500, 2500, 2500], // Definir anchos fijos (en twips, total ~10000 para 100%)
         });
-        sections.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: fichaRows }));
-    }
 
-    // Referencias
-    sections.push(new Paragraph({ text: '', spacing: { before: 200, after: 200 } }));
-    sections.push(new Paragraph({ text: 'REFERENCIAS BIBLIOGRÁFICAS:', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }));
-    (data.referencias_bibliograficas || []).forEach(ref => {
-        sections.push(new Paragraph({ children: [new TextRun({ text: `• ${ref}`, size: 20, font: 'Calibri' })], spacing: { after: 40 } }));
-    });
+        // --- SITUACIÓN SIGNIFICATIVA ---
+        const situacionTable = new Table({
+            width: { size: 100, type: WidthType.PERCENTAGE },
+            rows: [
+                new TableRow({ children: [makeHeaderCell('IV. SITUACIÓN SIGNIFICATIVA / RETO', 1)] }),
+                new TableRow({ children: [makeCell(data.situacion_significativa)] }),
+            ]
+        });
 
-    // Firmas
-    sections.push(new Paragraph({ text: '', spacing: { before: 600 } }));
-    sections.push(new Paragraph({
-        children: [
-            new TextRun({ text: '________________________                    ________________________', size: 20, font: 'Calibri' }),
-        ],
-        alignment: AlignmentType.CENTER
-    }));
-    sections.push(new Paragraph({
-        children: [
-            new TextRun({ text: `    ${d.director || 'Director(a)'}                               ${d.docente || 'Docente'}    `, size: 18, font: 'Calibri' }),
-        ],
-        alignment: AlignmentType.CENTER
-    }));
-    sections.push(new Paragraph({
-        children: [
-            new TextRun({ text: '         Director(a)                                          Docente de Área         ', size: 16, font: 'Calibri', italics: true, color: '666666' }),
-        ],
-        alignment: AlignmentType.CENTER
-    }));
+        // --- CRITERIOS DE EVALUACIÓN ---
+        const criteriosRows = [
+            new TableRow({ children: [makeHeaderCell('V. CRITERIOS DE EVALUACIÓN', 2)] }),
+            new TableRow({ children: [makeSubHeaderCell('CRITERIO'), makeSubHeaderCell('EVIDENCIA')] }),
+        ];
+        (data.criterios_evaluacion || []).forEach(c => {
+            criteriosRows.push(new TableRow({ children: [makeCell(c.criterio), makeCell(c.evidencia)] }));
+        });
+        const criteriosTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: criteriosRows });
 
-    const doc = new Document({
-        sections: [{
-            properties: {
-                page: {
-                    margin: { top: 851, right: 851, bottom: 851, left: 851 },
+        // --- SECUENCIA DIDÁCTICA ---
+        const secRows = [
+            new TableRow({ children: [makeHeaderCell('VI. SECUENCIA DIDÁCTICA', 4)] }),
+            new TableRow({ children: [makeSubHeaderCell('MOMENTO'), makeSubHeaderCell('ACTIVIDAD / ESTRATEGIA'), makeSubHeaderCell('RECURSOS'), makeSubHeaderCell('TIEMPO')] }),
+        ];
+
+        const addPhase = (phaseName, phase, color) => {
+            const phaseShading = { type: ShadingType.SOLID, color, fill: color };
+            secRows.push(new TableRow({
+                children: [
+                    new TableCell({
+                        children: [new Paragraph({ children: [new TextRun({ text: `${phaseName} (${phase.duracion})`, bold: true, color: 'ffffff', size: 18, font: 'Calibri' })], alignment: AlignmentType.CENTER })],
+                        shading: phaseShading, borders: cellBorders, columnSpan: 4, verticalAlign: 'center'
+                    })
+                ]
+            }));
+            (phase.actividades || []).forEach(act => {
+                secRows.push(new TableRow({
+                    children: [
+                        makeCell(act.momento, 1, true),
+                        makeCell(act.descripcion),
+                        makeCell(act.recursos || ''),
+                        makeCell(act.tiempo || ''),
+                    ]
+                }));
+            });
+        };
+
+        const sd = data.secuencia_didactica || {};
+        if (sd.inicio) addPhase('INICIO', sd.inicio, '27ae60');
+        if (sd.desarrollo) addPhase('DESARROLLO', sd.desarrollo, '2980b9');
+        if (sd.cierre) addPhase('CIERRE', sd.cierre, 'e74c3c');
+
+        const secuenciaTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: secRows });
+
+        // --- INSTRUMENTO DE EVALUACIÓN ---
+        const inst = data.instrumento_evaluacion;
+        const instHeaderRow = [makeSubHeaderCell('N°'), makeSubHeaderCell('APELLIDOS Y NOMBRES')];
+        (inst.criterios_instrumento || []).forEach((c, i) => {
+            instHeaderRow.push(makeSubHeaderCell(`C${i + 1}`));
+        });
+
+        const instRows = [
+            new TableRow({ children: [makeHeaderCell(`VII. INSTRUMENTO DE EVALUACIÓN: ${inst.tipo}`, 2 + (inst.criterios_instrumento || []).length)] }),
+        ];
+
+        // Fila de leyenda de criterios
+        const criteriosLeyenda = (inst.criterios_instrumento || []).map((c, i) => `C${i + 1}: ${c.criterio}`).join(' | ');
+        instRows.push(new TableRow({ children: [makeCell(criteriosLeyenda, 2 + (inst.criterios_instrumento || []).length)] }));
+
+        instRows.push(new TableRow({ children: instHeaderRow }));
+
+        (Array.isArray(inst?.alumnos) ? inst.alumnos : []).forEach((alumno, idx) => {
+            const row = [makeCell(`${idx + 1}`), makeCell(alumno)];
+            (Array.isArray(inst?.criterios_instrumento) ? inst.criterios_instrumento : []).forEach(() => row.push(makeCell('')));
+            instRows.push(new TableRow({ children: row }));
+        });
+
+        const instrumentoTable = new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: instRows });
+
+        // --- DOCUMENT ---
+        const sections = [
+            new Paragraph({ text: 'I. TÍTULO DE LA SESIÓN: ' + (data.titulo || 'SESIÓN DE APRENDIZAJE'), heading: HeadingLevel.HEADING_1, alignment: AlignmentType.CENTER, spacing: { after: 200 } }),
+            datosTable,
+            new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
+            propositosTable,
+            new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
+            new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({ children: [makeHeaderCell('PROPÓSITO DE LA SESIÓN', 1)] }),
+                    new TableRow({ children: [makeCell(data.proposito_sesion)] }),
+                ]
+            }),
+            new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
+            situacionTable,
+            new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
+            criteriosTable,
+            new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
+            secuenciaTable,
+            new Paragraph({ text: '', spacing: { before: 200, after: 200 } }),
+            instrumentoTable,
+        ];
+
+        // Teoría
+        if (data.teoria) {
+            sections.push(new Paragraph({ text: '', spacing: { before: 200, after: 200 } }));
+            sections.push(new Table({
+                width: { size: 100, type: WidthType.PERCENTAGE },
+                rows: [
+                    new TableRow({ children: [makeHeaderCell('VIII. TEORÍA DEL TEMA', 1)] }),
+                    new TableRow({ children: [makeCell(data.teoria.contenido)] }),
+                ]
+            }));
+        }
+
+        // Ficha
+        if (data.ficha_aplicacion) {
+            sections.push(new Paragraph({ text: '', spacing: { before: 200, after: 200 } }));
+            const fichaRows = [new TableRow({ children: [makeHeaderCell('IX. FICHA DE APLICACIÓN', 1)] })];
+            (data.ficha_aplicacion.preguntas || []).forEach(p => {
+                let texto = `${p.numero}. ${p.pregunta}`;
+                if (p.opciones) texto += '\n' + p.opciones.join('\n');
+                fichaRows.push(new TableRow({ children: [makeCell(texto)] }));
+            });
+            sections.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: fichaRows }));
+        }
+
+        // Referencias
+        sections.push(new Paragraph({ text: '', spacing: { before: 200, after: 200 } }));
+        sections.push(new Paragraph({ text: 'REFERENCIAS BIBLIOGRÁFICAS:', heading: HeadingLevel.HEADING_2, spacing: { after: 100 } }));
+        (data.referencias_bibliograficas || []).forEach(ref => {
+            sections.push(new Paragraph({ children: [new TextRun({ text: `• ${ref}`, size: 20, font: 'Calibri' })], spacing: { after: 40 } }));
+        });
+
+        // Firmas
+        sections.push(new Paragraph({ text: '', spacing: { before: 600 } }));
+        sections.push(new Paragraph({
+            children: [
+                new TextRun({ text: '________________________                    ________________________', size: 20, font: 'Calibri' }),
+            ],
+            alignment: AlignmentType.CENTER
+        }));
+        sections.push(new Paragraph({
+            children: [
+                new TextRun({ text: `    ${d.director || 'Director(a)'}                               ${d.docente || 'Docente'}    `, size: 18, font: 'Calibri' }),
+            ],
+            alignment: AlignmentType.CENTER
+        }));
+        sections.push(new Paragraph({
+            children: [
+                new TextRun({ text: '         Director(a)                                          Docente de Área         ', size: 16, font: 'Calibri', italics: true, color: '666666' }),
+            ],
+            alignment: AlignmentType.CENTER
+        }));
+
+        const doc = new Document({
+            sections: [{
+                properties: {
+                    page: {
+                        margin: { top: 851, right: 851, bottom: 851, left: 851 },
+                    },
                 },
-            },
-            children: sections,
-        }],
-    });
+                children: sections,
+            }],
+        });
 
-    const blob = await Packer.toBlob(doc);
-    const filename = `Sesion_${(d.tema || 'aprendizaje').replace(/\s+/g, '_').substring(0, 30)}_${d.grado || ''}.docx`;
-    saveAs(blob, filename);
+        const blob = await Packer.toBlob(doc);
+        const filename = `Sesion_${(d.tema || 'aprendizaje').replace(/\s+/g, '_').substring(0, 30)}_${d.grado || ''}.docx`;
+        saveAs(blob, filename);
+    } catch (error) {
+        console.error("Error al generar Word:", error);
+        alert("Hubo un error al generar el archivo Word: " + error.message);
+    }
 };
-
-
 // ==================== SESSION PREVIEW COMPONENT ====================
 function SessionPreview({ data }) {
     if (!data) return null;
@@ -279,7 +302,8 @@ function SessionPreview({ data }) {
         fontWeight: 600,
         fontSize: '0.8rem',
         border: '1px solid rgba(100, 116, 139, 0.3)',
-        whiteSpace: 'nowrap',
+        whiteSpace: 'normal',
+        verticalAlign: 'middle',
     };
     const tdStyle = {
         padding: '0.5rem 0.8rem',
@@ -288,6 +312,12 @@ function SessionPreview({ data }) {
         lineHeight: 1.6,
         fontSize: '0.82rem',
     };
+
+    const SafeText = (val) => {
+        if (val == null) return '-';
+        if (typeof val === 'object') return JSON.stringify(val);
+        return String(val);
+    };
     const phaseColors = {
         inicio: { bg: 'rgba(39, 174, 96, 0.2)', header: 'linear-gradient(135deg, #27ae60, #2ecc71)', label: '🟢 INICIO' },
         desarrollo: { bg: 'rgba(41, 128, 185, 0.2)', header: 'linear-gradient(135deg, #2980b9, #3498db)', label: '🔵 DESARROLLO' },
@@ -295,16 +325,18 @@ function SessionPreview({ data }) {
     };
 
     const renderPhase = (key, phase) => {
+        if (!phase) return null;
         const colors = phaseColors[key];
+        const actividades = Array.isArray(phase.actividades) ? phase.actividades : [];
         return (
             <React.Fragment key={key}>
-                <tr><td colSpan="4" style={{ ...thStyle, background: colors.header, textAlign: 'center', fontSize: '0.9rem' }}>{colors.label} ({phase.duracion})</td></tr>
-                {(phase.actividades || []).map((act, i) => (
+                <tr><td colSpan="4" style={{ ...thStyle, background: colors.header, textAlign: 'center', fontSize: '0.9rem' }}>{colors.label} ({phase.duracion || '-'})</td></tr>
+                {actividades.map((act, i) => (
                     <tr key={i} style={{ background: i % 2 === 0 ? colors.bg : 'transparent' }}>
-                        <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--text-primary)', width: '18%' }}>{act.momento}</td>
-                        <td style={{ ...tdStyle, whiteSpace: 'pre-wrap' }}>{act.descripcion}</td>
-                        <td style={{ ...tdStyle, width: '12%' }}>{act.recursos || '-'}</td>
-                        <td style={{ ...tdStyle, width: '8%', textAlign: 'center' }}>{act.tiempo || '-'}</td>
+                        <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--text-primary)', width: '18%' }}>{SafeText(act.momento)}</td>
+                        <td style={{ ...tdStyle, whiteSpace: 'pre-wrap' }}>{SafeText(act.descripcion)}</td>
+                        <td style={{ ...tdStyle, width: '12%' }}>{SafeText(act.recursos)}</td>
+                        <td style={{ ...tdStyle, width: '8%', textAlign: 'center' }}>{SafeText(act.tiempo)}</td>
                     </tr>
                 ))}
             </React.Fragment>
@@ -316,61 +348,75 @@ function SessionPreview({ data }) {
             {/* TÍTULO */}
             <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
                 <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>
-                    📋 {data.titulo || 'SESIÓN DE APRENDIZAJE'}
+                    I. TÍTULO DE LA SESIÓN: {data.titulo || 'SESIÓN DE APRENDIZAJE'}
                 </h2>
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Generado por EduFísica AI • Alineado al CNEB</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Alineado al CNEB</span>
             </div>
 
             {/* I. DATOS INFORMATIVOS */}
             <table style={tableStyle}>
-                <thead><tr><th colSpan="4" style={thStyle}>I. DATOS INFORMATIVOS</th></tr></thead>
+                <thead><tr><th colSpan="4" style={thStyle}>II. DATOS INFORMATIVOS</th></tr></thead>
                 <tbody>
-                    <tr><td style={subThStyle}>Docente</td><td style={tdStyle}>{d.docente}</td><td style={subThStyle}>I.E.</td><td style={tdStyle}>{d.ie}</td></tr>
-                    <tr><td style={subThStyle}>Director(a)</td><td style={tdStyle}>{d.director}</td><td style={subThStyle}>DRE</td><td style={tdStyle}>{d.dre}</td></tr>
-                    <tr><td style={subThStyle}>UGEL</td><td style={tdStyle}>{d.ugel}</td><td style={subThStyle}>Nivel</td><td style={tdStyle}>{d.nivel}</td></tr>
-                    <tr><td style={subThStyle}>Grado</td><td style={tdStyle}>{d.grado}</td><td style={subThStyle}>Área</td><td style={tdStyle}>{d.area}</td></tr>
-                    <tr><td style={subThStyle}>Tema</td><td colSpan="3" style={tdStyle}>{d.tema}</td></tr>
-                    <tr><td style={subThStyle}>Duración</td><td style={tdStyle}>{d.duracion}</td><td style={subThStyle}>Fecha</td><td style={tdStyle}>{d.fecha}</td></tr>
+                    <tr><td style={subThStyle}>Docente</td><td style={tdStyle}>{SafeText(d?.docente)}</td><td style={subThStyle}>I.E.</td><td style={tdStyle}>{SafeText(d?.ie)}</td></tr>
+                    <tr><td style={subThStyle}>Director(a)</td><td style={tdStyle}>{SafeText(d?.director)}</td><td style={subThStyle}>Nivel</td><td style={tdStyle}>{SafeText(d?.nivel)}</td></tr>
+                    <tr><td style={subThStyle}>Grado</td><td style={tdStyle}>{SafeText(d?.grado)}</td><td style={subThStyle}>Área</td><td style={tdStyle}>{SafeText(d?.area)}</td></tr>
+                    <tr><td style={subThStyle}>Tema</td><td colSpan="3" style={tdStyle}>{SafeText(d?.tema)}</td></tr>
+                    <tr><td style={subThStyle}>Duración</td><td style={tdStyle}>{SafeText(d?.duracion)}</td><td style={subThStyle}>Fecha</td><td style={tdStyle}>{SafeText(d?.fecha)}</td></tr>
                 </tbody>
             </table>
 
-            {/* II. PROPÓSITOS */}
-            <table style={tableStyle}>
-                <thead><tr><th colSpan="4" style={thStyle}>II. PROPÓSITOS DE APRENDIZAJE</th></tr></thead>
+            <table style={{ ...tableStyle, tableLayout: 'fixed' }}>
+                <thead><tr><th colSpan="4" style={thStyle}>III. PROPÓSITOS DE APRENDIZAJE</th></tr></thead>
                 <tbody>
-                    <tr><td style={subThStyle}>Competencia</td><td style={subThStyle}>Capacidades</td><td style={subThStyle}>Estándar de Aprendizaje (CNEB)</td><td style={subThStyle}>Evidencia</td></tr>
-                    {(p.competencias || []).map((comp, i) => (
+                    <tr>
+                        <td style={{ ...subThStyle, width: '20%' }}>Competencia</td>
+                        <td style={{ ...subThStyle, width: '25%' }}>Capacidades</td>
+                        <td colSpan="2" style={{ ...subThStyle, width: '55%' }}>Estándar / Desempeños</td>
+                    </tr>
+                    {(Array.isArray(p?.competencias) ? p.competencias : []).map((comp, i) => (
                         <tr key={i}>
-                            <td style={{ ...tdStyle, fontWeight: 600, width: '25%' }}>{comp.nombre}</td>
-                            <td style={tdStyle}>{(comp.capacidades || []).map((c, j) => <div key={j}>• {c}</div>)}</td>
-                            <td style={tdStyle}><em>{comp.estandar || ''}</em></td>
-                            <td style={{ ...tdStyle, width: '20%' }}>{data.evidencia_aprendizaje}</td>
+                            <td style={{ ...tdStyle, fontWeight: 600 }}>{SafeText(comp.nombre)}</td>
+                            <td style={tdStyle}>{Array.isArray(comp.capacidades) ? comp.capacidades.map((c, j) => <div key={j} style={{marginBottom: '4px'}}>• {SafeText(c)}</div>) : SafeText(comp.capacidades)}</td>
+                            <td colSpan="2" style={tdStyle}>
+                                <div style={{fontWeight: 600, fontSize: '0.75rem', marginBottom: '4px', color: 'var(--color-primary)'}}>Estándar:</div>
+                                <div style={{marginBottom: '8px', fontSize: '0.78rem'}}><em>{SafeText(comp.estandar)}</em></div>
+                                <div style={{fontWeight: 600, fontSize: '0.75rem', marginBottom: '4px', color: 'var(--color-secondary)'}}>Desempeños:</div>
+                                {Array.isArray(comp.desempeños) ? comp.desempeños.map((d, k) => <div key={k} style={{fontSize: '0.78rem'}}>• {SafeText(d)}</div>) : SafeText(comp.desempeños)}
+                            </td>
                         </tr>
                     ))}
-                    <tr><td style={subThStyle}>Comp. Transversal</td><td colSpan="3" style={tdStyle}>{p.competencia_transversal}</td></tr>
-                    <tr><td style={subThStyle}>Enfoque Transversal</td><td style={tdStyle}>{p.enfoque_transversal}</td><td style={subThStyle}>Valor / Actitud</td><td style={tdStyle}>{p.valor} / {p.actitud}</td></tr>
+                    <tr>
+                        <td style={{ ...subThStyle, whiteSpace: 'normal' }}>Comp. Transversal</td>
+                        <td colSpan="3" style={tdStyle}>{SafeText(p?.competencia_transversal)}</td>
+                    </tr>
+                    <tr>
+                        <td style={{ ...subThStyle, whiteSpace: 'normal' }}>Enfoque Transversal</td>
+                        <td style={tdStyle}>{SafeText(p?.enfoque_transversal)}</td>
+                        <td style={subThStyle}>Valor / Actitud</td>
+                        <td style={tdStyle}>{SafeText(p?.valor)} / {SafeText(p?.actitud)}</td>
+                    </tr>
                 </tbody>
             </table>
 
             {/* PROPÓSITO DE LA SESIÓN */}
             <table style={tableStyle}>
                 <thead><tr><th style={thStyle}>PROPÓSITO DE LA SESIÓN</th></tr></thead>
-                <tbody><tr><td style={{ ...tdStyle, fontStyle: 'italic', lineHeight: 1.8 }}>{data.proposito_sesion}</td></tr></tbody>
+                <tbody><tr><td style={{ ...tdStyle, fontStyle: 'italic', lineHeight: 1.8 }}>{SafeText(data.proposito_sesion)}</td></tr></tbody>
             </table>
 
             {/* SITUACIÓN SIGNIFICATIVA */}
             <table style={tableStyle}>
-                <thead><tr><th style={thStyle}>III. SITUACIÓN SIGNIFICATIVA / RETO</th></tr></thead>
-                <tbody><tr><td style={{ ...tdStyle, lineHeight: 1.8 }}>{data.situacion_significativa}</td></tr></tbody>
+                <thead><tr><th style={thStyle}>IV. SITUACIÓN SIGNIFICATIVA / RETO</th></tr></thead>
+                <tbody><tr><td style={{ ...tdStyle, lineHeight: 1.8 }}>{SafeText(data.situacion_significativa)}</td></tr></tbody>
             </table>
 
             {/* CRITERIOS DE EVALUACIÓN */}
             <table style={tableStyle}>
-                <thead><tr><th colSpan="2" style={thStyle}>IV. CRITERIOS DE EVALUACIÓN</th></tr></thead>
+                <thead><tr><th colSpan="2" style={thStyle}>V. CRITERIOS DE EVALUACIÓN</th></tr></thead>
                 <tbody>
                     <tr><td style={subThStyle}>Criterio</td><td style={subThStyle}>Evidencia Esperada</td></tr>
-                    {(data.criterios_evaluacion || []).map((c, i) => (
-                        <tr key={i}><td style={tdStyle}>{c.criterio}</td><td style={tdStyle}>{c.evidencia}</td></tr>
+                    {(Array.isArray(data.criterios_evaluacion) ? data.criterios_evaluacion : []).map((c, i) => (
+                        <tr key={i}><td style={tdStyle}>{SafeText(c.criterio)}</td><td style={tdStyle}>{SafeText(c.evidencia)}</td></tr>
                     ))}
                 </tbody>
             </table>
@@ -378,13 +424,13 @@ function SessionPreview({ data }) {
             {/* SECUENCIA DIDÁCTICA */}
             <table style={tableStyle}>
                 <thead>
-                    <tr><th colSpan="4" style={thStyle}>V. SECUENCIA DIDÁCTICA</th></tr>
+                    <tr><th colSpan="4" style={thStyle}>VI. SECUENCIA DIDÁCTICA</th></tr>
                     <tr><td style={subThStyle}>Momento</td><td style={subThStyle}>Actividad / Estrategia</td><td style={subThStyle}>Recursos</td><td style={subThStyle}>Tiempo</td></tr>
                 </thead>
                 <tbody>
-                    {renderPhase('inicio', data.secuencia_didactica.inicio)}
-                    {renderPhase('desarrollo', data.secuencia_didactica.desarrollo)}
-                    {renderPhase('cierre', data.secuencia_didactica.cierre)}
+                    {data.secuencia_didactica?.inicio && renderPhase('inicio', data.secuencia_didactica.inicio)}
+                    {data.secuencia_didactica?.desarrollo && renderPhase('desarrollo', data.secuencia_didactica.desarrollo)}
+                    {data.secuencia_didactica?.cierre && renderPhase('cierre', data.secuencia_didactica.cierre)}
                 </tbody>
             </table>
 
@@ -395,22 +441,26 @@ function SessionPreview({ data }) {
                 return (
                     <table style={tableStyle}>
                         <thead>
-                            <tr><th colSpan={2 + criterios.length} style={thStyle}>VI. INSTRUMENTO DE EVALUACIÓN: {inst.tipo}</th></tr>
+                            <tr><th colSpan={2 + criterios.length} style={thStyle}>VII. INSTRUMENTO DE EVALUACIÓN: {inst.tipo}</th></tr>
                             <tr><td colSpan={2 + criterios.length} style={{ ...tdStyle, fontSize: '0.75rem', fontStyle: 'italic', background: 'rgba(30, 64, 175, 0.08)' }}>
                                 {criterios.map((c, i) => <span key={i} style={{ marginRight: '1rem' }}><strong>C{i + 1}:</strong> {c.criterio}</span>)}
                             </td></tr>
                             <tr>
-                                <td style={subThStyle}>N°</td>
-                                <td style={subThStyle}>Apellidos y Nombres</td>
-                                {criterios.map((_, i) => <td key={i} style={{ ...subThStyle, textAlign: 'center' }}>C{i + 1}</td>)}
+                                <th style={{ ...subThStyle, width: '5%' }}>N°</th>
+                                <th style={subThStyle}>Estudiante</th>
+                                {criterios.map((c, i) => (
+                                    <th key={i} style={{ ...subThStyle, width: '8%', fontSize: '0.65rem' }} title={SafeText(c.criterio)}>
+                                        Crit. {i + 1}
+                                    </th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody>
-                            {(inst.alumnos || []).map((alumno, idx) => (
+                            {(Array.isArray(inst.alumnos) ? inst.alumnos : []).map((alumno, idx) => (
                                 <tr key={idx} style={{ background: idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
                                     <td style={{ ...tdStyle, textAlign: 'center', width: '5%' }}>{idx + 1}</td>
-                                    <td style={tdStyle}>{alumno}</td>
-                                    {criterios.map((_, i) => <td key={i} style={{ ...tdStyle, textAlign: 'center', width: '8%' }}></td>)}
+                                    <td style={{ ...tdStyle, fontSize: '0.78rem' }}>{SafeText(alumno)}</td>
+                                    {criterios.map((_, i) => <td key={i} style={{ ...tdStyle, textAlign: 'center', width: '8%', border: '1px solid rgba(255,255,255,0.1)' }}></td>)}
                                 </tr>
                             ))}
                         </tbody>
@@ -421,7 +471,7 @@ function SessionPreview({ data }) {
             {/* TEORÍA */}
             {data.teoria && (
                 <table style={tableStyle}>
-                    <thead><tr><th style={thStyle}>VII. TEORÍA DEL TEMA: {data.teoria.titulo}</th></tr></thead>
+                    <thead><tr><th style={thStyle}>VIII. TEORÍA DEL TEMA: {data.teoria.titulo}</th></tr></thead>
                     <tbody><tr><td style={{ ...tdStyle, whiteSpace: 'pre-wrap', lineHeight: 1.8 }}>{data.teoria.contenido}</td></tr></tbody>
                 </table>
             )}
@@ -429,12 +479,12 @@ function SessionPreview({ data }) {
             {/* FICHA */}
             {data.ficha_aplicacion && (
                 <table style={tableStyle}>
-                    <thead><tr><th style={thStyle}>VIII. FICHA DE APLICACIÓN</th></tr></thead>
+                    <thead><tr><th style={thStyle}>IX. FICHA DE APLICACIÓN</th></tr></thead>
                     <tbody>
-                        {(data.ficha_aplicacion.preguntas || []).map((p, i) => (
+                        {(Array.isArray(data.ficha_aplicacion?.preguntas) ? data.ficha_aplicacion.preguntas : []).map((p, i) => (
                             <tr key={i}><td style={{ ...tdStyle, lineHeight: 1.8 }}>
-                                <strong>{p.numero}. {p.pregunta}</strong>
-                                {p.opciones && <div style={{ paddingLeft: '1rem', marginTop: '0.3rem' }}>{p.opciones.map((o, j) => <div key={j}>{o}</div>)}</div>}
+                                <strong>{SafeText(p.numero)}. {SafeText(p.pregunta)}</strong>
+                                {Array.isArray(p.opciones) && <div style={{ paddingLeft: '1rem', marginTop: '0.3rem' }}>{p.opciones.map((o, j) => <div key={j}>{SafeText(o)}</div>)}</div>}
                                 {p.tipo === 'abierta' && <div style={{ borderBottom: '1px dotted #666', marginTop: '0.5rem', height: '1.5rem' }}></div>}
                             </td></tr>
                         ))}
@@ -446,8 +496,8 @@ function SessionPreview({ data }) {
             {data.referencias_bibliograficas && (
                 <div style={{ marginTop: '1rem', padding: '0.8rem', background: 'rgba(30, 64, 175, 0.08)', borderRadius: '8px', borderLeft: '3px solid var(--color-primary)' }}>
                     <strong style={{ fontSize: '0.8rem', color: 'var(--color-primary)' }}>📚 Referencias Bibliográficas:</strong>
-                    {data.referencias_bibliograficas.map((ref, i) => (
-                        <div key={i} style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>• {ref}</div>
+                    {(Array.isArray(data.referencias_bibliograficas) ? data.referencias_bibliograficas : []).map((ref, i) => (
+                        <div key={i} style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '0.3rem' }}>• {SafeText(ref)}</div>
                     ))}
                 </div>
             )}
@@ -467,8 +517,6 @@ function Generator() {
         docente: '',
         ie: '',
         director: '',
-        dre: '',
-        ugel: '',
         contexto: '',
         nivel: 'Secundaria',
         grado: '3er Grado',
@@ -573,7 +621,41 @@ Devuelve SOLO un array JSON válido con 5 strings, sin texto adicional. Ejemplo:
         try {
             const result = await generateStructuredSession(formData);
             if (result.success) {
-                setSessionData(result.data);
+                const data = result.data;
+                
+                if (formData.alumnos && data.instrumento_evaluacion) {
+                    const currentAlumnos = Array.isArray(data.instrumento_evaluacion.alumnos) ? data.instrumento_evaluacion.alumnos : [];
+                    if (currentAlumnos.length === 0) {
+                        const studentList = formData.alumnos
+                            .split('\n')
+                            .map(name => name.trim())
+                            .filter(name => name.length > 0);
+                        data.instrumento_evaluacion.alumnos = studentList;
+                    }
+                } else if (formData.alumnos && !data.instrumento_evaluacion) {
+                    const studentList = formData.alumnos
+                        .split('\n')
+                        .map(name => name.trim())
+                        .filter(name => name.length > 0);
+                    data.instrumento_evaluacion = { 
+                        tipo: formData.instrumento || 'Lista de Cotejo',
+                        alumnos: studentList,
+                        criterios_instrumento: []
+                    };
+                }
+
+                setSessionData(data);
+
+                // Track session generation for real stats
+                try {
+                    await addDoc(collection(db, 'sessions'), {
+                        tema: formData.tema,
+                        docente: formData.docente || 'Anónimo',
+                        createdAt: serverTimestamp()
+                    });
+                } catch (e) {
+                    console.error("Error logging session:", e);
+                }
             } else {
                 setErrorMsg(result.error);
             }
@@ -604,7 +686,7 @@ Devuelve SOLO un array JSON válido con 5 strings, sin texto adicional. Ejemplo:
 
     return (
         <div style={{ minHeight: '80vh' }}>
-            <div className="generator-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(350px, 1fr))', gap: '2rem' }}>
+            <div className="responsive-two-column">
 
                 {/* ======================== LEFT: FORM ======================== */}
                 <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="glass"
@@ -630,17 +712,6 @@ Devuelve SOLO un array JSON válido con 5 strings, sin texto adicional. Ejemplo:
                     <div className="form-group">
                         <label className="form-label">Nombre del Director(a):</label>
                         <input type="text" className="form-input" placeholder="Nombre del director(a)" value={formData.director} onChange={(e) => setFormData({ ...formData, director: e.target.value })} />
-                    </div>
-
-                    <div className="form-grid-2">
-                        <div className="form-group">
-                            <label className="form-label">DRE:</label>
-                            <input type="text" className="form-input" placeholder="Ej: DRE San Martín" value={formData.dre} onChange={(e) => setFormData({ ...formData, dre: e.target.value })} />
-                        </div>
-                        <div className="form-group">
-                            <label className="form-label">UGEL:</label>
-                            <input type="text" className="form-input" placeholder="Ej: UGEL Lamas" value={formData.ugel} onChange={(e) => setFormData({ ...formData, ugel: e.target.value })} />
-                        </div>
                     </div>
 
                     <div className="form-group">
@@ -718,7 +789,7 @@ Devuelve SOLO un array JSON válido con 5 strings, sin texto adicional. Ejemplo:
 
                     <div className="form-group">
                         <label className="form-label">Tema Específico de la Sesión:</label>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <div className="input-with-button-responsive">
                             <input type="text" className="form-input" style={{ flex: 1 }}
                                 placeholder="Ej: Recepcón en voleibol y posiciones" value={formData.tema}
                                 onChange={(e) => setFormData({ ...formData, tema: e.target.value })} />
@@ -862,7 +933,7 @@ Devuelve SOLO un array JSON válido con 5 strings, sin texto adicional. Ejemplo:
                             </motion.div>
                         ) : (
                             <motion.div key="result" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                                className="glass result-container" style={{ padding: '1.5rem', maxHeight: '90vh', overflowY: 'auto' }}>
+                                className="glass result-container" style={{ padding: '1.5rem', maxHeight: 'none', overflowY: 'visible' }}>
 
                                 {/* Action bar */}
                                 <div style={{

@@ -1,0 +1,70 @@
+{"users": [
+{
+  "localId": "35QPa0azRTTbZGR5NIjFMVrJHRD3",
+  "email": "juanjm680.jc@gmail.com",
+  "emailVerified": true,
+  "displayName": "Juan Caicedo",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocIQn1trFleVCy5MslM0ZUD7-Pbn68UZXgLK3LqPLbQVIufbU_4U=s96-c",
+  "lastSignedInAt": "1772389403838",
+  "createdAt": "1772389403838",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "103122139787015051997",
+      "email": "juanjm680.jc@gmail.com",
+      "displayName": "Juan Caicedo",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocIQn1trFleVCy5MslM0ZUD7-Pbn68UZXgLK3LqPLbQVIufbU_4U=s96-c"
+    }
+  ]
+},
+{
+  "localId": "GG5kEHY7KYaBsakhEmHlus5bq7K2",
+  "email": "carlos@email.com",
+  "emailVerified": false,
+  "passwordHash": "4Bxy4yAxa1Tl3PfkjYAEJWI8auXY+OIglyGIRNiDbzkRFhZKhbgt9hjHf4Oi7rPN8U2W2Pc6mKnm7FMp547CuQ==",
+  "salt": "n0tZuO9VJnJpMA==",
+  "displayName": "Carlos",
+  "lastSignedInAt": "1772725289908",
+  "createdAt": "1772724263218",
+  "providerUserInfo": []
+},
+{
+  "localId": "NhCAEW3HbQfqe0O1zn60nowTyxc2",
+  "email": "tatianavane28@gmail.com",
+  "emailVerified": false,
+  "passwordHash": "RHURxq1pL3rA+anzQrWmrYfDpW2vyttgiLI8wbr38K/MFzf24RK58w4H0I0H05IEElSa5sHhlVY/tM57632Jng==",
+  "salt": "XrifEXFl+OltWw==",
+  "displayName": "Tatiana ",
+  "lastSignedInAt": "1772904156922",
+  "createdAt": "1772734414890",
+  "providerUserInfo": []
+},
+{
+  "localId": "jtm6HrCVvVc7Ix8es1aGPqCrUnG2",
+  "email": "citymartlamas@gmail.com",
+  "emailVerified": true,
+  "displayName": "victor manuel rivera rios",
+  "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocL_DUmaCyG3QZNCxvVXLxtE7tqDzXV3RoA5zKtGXSLE8irT26o=s96-c",
+  "lastSignedInAt": "1772857068768",
+  "createdAt": "1772387826068",
+  "providerUserInfo": [
+    {
+      "providerId": "google.com",
+      "rawId": "115045347469828406957",
+      "email": "citymartlamas@gmail.com",
+      "displayName": "victor manuel rivera rios",
+      "photoUrl": "https://lh3.googleusercontent.com/a/ACg8ocL_DUmaCyG3QZNCxvVXLxtE7tqDzXV3RoA5zKtGXSLE8irT26o=s96-c"
+    }
+  ]
+},
+{
+  "localId": "lY1EQ7YFlOXVqLQOwCKeLDZpGIb2",
+  "email": "rivaldo@gmail.com",
+  "emailVerified": false,
+  "passwordHash": "GPEpNhGEj8nKJJ1aNxNQhgdtaHZ2yTBwvvwkG0A/h2R3EiQ+yUs/HYZqE3uFNeDf/vUSA18mvgQ+P3JPjdyQUg==",
+  "salt": "smPdjedFVrGx2A==",
+  "displayName": "Rivaldo",
+  "lastSignedInAt": "1772928827808",
+  "createdAt": "1772841678364",
+  "providerUserInfo": []
+}]}

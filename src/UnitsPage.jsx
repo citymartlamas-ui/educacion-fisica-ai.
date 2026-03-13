@@ -5,7 +5,367 @@ import {
     CheckCircle, ChevronRight, Search, Sparkles, Loader2,
     Check, Settings, Users, Calendar, Target, Clock, School
 } from 'lucide-react';
-import { generateLessonPlan } from './gemini';
+import { generateStructuredUnit, generateFastSuggestion } from './gemini';
+import { Document, Packer, Paragraph, Table, TableRow, TableCell, TextRun, WidthType, AlignmentType, BorderStyle, HeadingLevel, ShadingType } from 'docx';
+import { saveAs } from 'file-saver';
+
+// ==================== WORD EXPORT ====================
+// ==================== WORD EXPORT HELPERS ====================
+const NO_BORDERS = { top: { style: BorderStyle.NIL }, bottom: { style: BorderStyle.NIL }, left: { style: BorderStyle.NIL }, right: { style: BorderStyle.NIL } };
+
+const makeTextRuns = (str, bold = false, size = 18, color = '000000') => {
+    const text = (str == null ? '' : str).toString();
+    const sections = text.split('**');
+    const runs = [];
+    sections.forEach((part, i) => {
+        const lines = part.split('\\n');
+        lines.forEach((line, j) => {
+            if (j > 0) runs.push(new TextRun({ break: 1 }));
+            runs.push(new TextRun({ text: line, bold: bold || (i % 2 === 1), size, font: 'Calibri', color }));
+        });
+    });
+    return runs;
+};
+
+const makeHeaderCell = (text, colSpan = 1) => new TableCell({
+    children: [new Paragraph({ children: [new TextRun({ text: (text || '').toString(), bold: true, color: 'ffffff', size: 20, font: 'Calibri' })], alignment: AlignmentType.CENTER })],
+    shading: { type: ShadingType.SOLID, color: '1a56db', fill: '1a56db' },
+    borders: { top: { style: BorderStyle.SINGLE }, bottom: { style: BorderStyle.SINGLE }, left: { style: BorderStyle.SINGLE }, right: { style: BorderStyle.SINGLE } },
+    columnSpan: colSpan, verticalAlign: 'center',
+});
+
+const makeSubHeaderCell = (text, colSpan = 1) => new TableCell({
+    children: [new Paragraph({ children: [new TextRun({ text: (text || '').toString(), bold: true, size: 18, font: 'Calibri', color: '1e40af' })], alignment: AlignmentType.LEFT })],
+    shading: { type: ShadingType.SOLID, color: 'f1f5f9', fill: 'f1f5f9' },
+    borders: { top: { style: BorderStyle.SINGLE }, bottom: { style: BorderStyle.SINGLE }, left: { style: BorderStyle.SINGLE }, right: { style: BorderStyle.SINGLE } },
+    columnSpan: colSpan, verticalAlign: 'center',
+});
+
+const makeCell = (text, colSpan = 1, bold = false, align = AlignmentType.LEFT) => new TableCell({
+    children: [new Paragraph({ children: makeTextRuns(text, bold), alignment: align, spacing: { before: 80, after: 80 } })],
+    borders: { top: { style: BorderStyle.SINGLE }, bottom: { style: BorderStyle.SINGLE }, left: { style: BorderStyle.SINGLE }, right: { style: BorderStyle.SINGLE } },
+    columnSpan: colSpan, verticalAlign: 'center',
+});
+
+const spacer = (size = 200) => new Paragraph({ text: '', spacing: { before: size } });
+
+// ==================== WORD EXPORT ====================
+const exportToWord = async (data) => {
+    try {
+        const d = data.datos_informativos;
+
+        const doc = new Document({
+            sections: [{
+                properties: { page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } },
+                children: [
+                    new Paragraph({
+                        children: [new TextRun({ text: (data.titulo_unidad || 'UNIDAD DE APRENDIZAJE').toUpperCase(), bold: true, size: 28, font: 'Calibri', color: '1a56db' })],
+                        alignment: AlignmentType.CENTER, spacing: { after: 300 }
+                    }),
+
+                    // II. DATOS INFORMATIVOS
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                            new TableRow({ children: [makeHeaderCell('II. DATOS INFORMATIVOS', 4)] }),
+                            new TableRow({ children: [makeSubHeaderCell('DOCENTE'), makeCell(d.docente, 1), makeSubHeaderCell('I.E.'), makeCell(d.ie, 1)] }),
+                            new TableRow({ children: [makeSubHeaderCell('DIRECTOR(A)'), makeCell(d.director, 1), makeSubHeaderCell('NIVEL'), makeCell(d.nivel, 1)] }),
+                            new TableRow({ children: [makeSubHeaderCell('CICLO/GRADO'), makeCell(d.ciclo_grado, 1), makeSubHeaderCell('ÁREA'), makeCell(d.area, 1)] }),
+                            new TableRow({ children: [makeSubHeaderCell('AÑO Y PERIODO'), makeCell(`${d.anio} - ${d.periodo}`, 1), makeSubHeaderCell('DURACIÓN'), makeCell(d.duracion, 1)] }),
+                            new TableRow({ children: [makeSubHeaderCell('FECHAS'), makeCell(d.fechas, 1), makeSubHeaderCell('ESTUDIANTES'), makeCell(`${d.num_estudiantes} / ${d.turno}`, 1)] }),
+                        ]
+                    }),
+                    spacer(),
+
+                    // III. JUSTIFICACIÓN Y PROPÓSITO
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                            new TableRow({ children: [makeHeaderCell('III. JUSTIFICACIÓN Y PROPÓSITO', 1)] }),
+                            new TableRow({ children: [makeCell(`**JUSTIFICACIÓN:**\\n${data.justificacion}\\n\\n**PROPÓSITO:**\\n${data.proposito_unidad}`)] }),
+                        ]
+                    }),
+                    spacer(),
+
+                    // IV. SITUACIÓN SIGNIFICATIVA
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                            new TableRow({ children: [makeHeaderCell('IV. SITUACIÓN SIGNIFICATIVA / RETO', 1)] }),
+                            new TableRow({ children: [makeCell(data.situacion_significativa)] }),
+                        ]
+                    }),
+                    spacer(),
+
+                    // V. PRODUCTO
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                            new TableRow({ children: [makeHeaderCell('V. PRODUCTO DE LA UNIDAD', 1)] }),
+                            new TableRow({ children: [makeCell(data.producto_unidad, 1, true, AlignmentType.CENTER)] }),
+                        ]
+                    }),
+                    spacer(),
+
+                    // VI. PROPÓSITOS DE APRENDIZAJE
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                            new TableRow({ children: [makeHeaderCell('VI. PROPÓSITOS DE APRENDIZAJE', 3)] }),
+                            new TableRow({ children: [makeSubHeaderCell('COMPETENCIA / CAPACIDADES'), makeSubHeaderCell('ESTÁNDAR DE APRENDIZAJE'), makeSubHeaderCell('DESEMPEÑOS PRECISADOS')] }),
+                            ...(data.competencias_capacidades_estandar || []).map(comp => new TableRow({
+                                children: [
+                                    makeCell(`**${comp.competencia}**\\n\\n` + (comp.capacidades || []).map(c => `• ${c}`).join('\\n')),
+                                    makeCell(comp.estandar, 1, false),
+                                    makeCell((comp.desempenos || []).map(d => `• ${d}`).join('\\n'))
+                                ]
+                            }))
+                        ]
+                    }),
+                    spacer(),
+
+                    // VII. ENFOQUES
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                            new TableRow({ children: [makeHeaderCell('VII. ENFOQUES TRANSVERSALES', 3)] }),
+                            new TableRow({ children: [makeSubHeaderCell('ENFOQUE'), makeSubHeaderCell('VALORES'), makeSubHeaderCell('ACTITUDES')] }),
+                            ...(data.enfoques_transversales || []).map(enf => new TableRow({
+                                children: [
+                                    makeCell(enf.enfoque, 1, true),
+                                    makeCell(enf.valores),
+                                    makeCell(`Estudiantes: ${enf.actitudes}\\n\\nDocente: ${enf.actitud_docente}`)
+                                ]
+                            }))
+                        ]
+                    }),
+                    spacer(),
+
+                    // VIII. SECUENCIA DIDÁCTICA
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                            new TableRow({ children: [makeHeaderCell('VIII. SECUENCIA DIDÁCTICA DE SESIONES', 4)] }),
+                            new TableRow({ children: [makeSubHeaderCell('SEMANA'), makeSubHeaderCell('TÍTULO DE LA SESIÓN'), makeSubHeaderCell('PROPÓSITO'), makeSubHeaderCell('TIEMPO')] }),
+                            ...(data.secuencia_sesiones || []).map(ses => new TableRow({
+                                children: [
+                                    makeCell(ses.semana, 1, true, AlignmentType.CENTER),
+                                    makeCell(ses.titulo, 1, true),
+                                    makeCell(ses.proposito),
+                                    makeCell(ses.tiempo, 1, false, AlignmentType.CENTER)
+                                ]
+                            }))
+                        ]
+                    }),
+                    spacer(),
+
+                    // IX. EVALUACIÓN e INSTRUMENTOS
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                            new TableRow({ children: [makeHeaderCell('IX. EVALUACIÓN Y ORIENTACIONES', 2)] }),
+                            new TableRow({ children: [makeSubHeaderCell('CRITERIOS Y EVIDENCIAS'), makeSubHeaderCell('ORIENTACIONES PEDAGÓGICAS')] }),
+                            new TableRow({
+                                children: [
+                                    makeCell(`**Criterios:**\\n${(data.evaluacion.criterios || []).join('\\n')}\\n\\n**Evidencias:**\\n${(data.evaluacion.evidencias || []).join('\\n')}\\n\\n**Instrumentos:**\\n${(data.evaluacion.instrumentos || []).join('\\n')}`),
+                                    makeCell(data.orientaciones_pedagogicas)
+                                ]
+                            })
+                        ]
+                    }),
+                    spacer(400),
+
+                    // FIRMAS
+                    new Table({
+                        width: { size: 100, type: WidthType.PERCENTAGE },
+                        rows: [
+                            new TableRow({
+                                children: [
+                                    new TableCell({
+                                        children: [
+                                            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '__________________________', size: 18, font: 'Calibri' })] }),
+                                            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'DIRECTOR(A)', bold: true, size: 18, font: 'Calibri' })] })
+                                        ], borders: NO_BORDERS
+                                    }),
+                                    new TableCell({
+                                        children: [
+                                            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '__________________________', size: 18, font: 'Calibri' })] }),
+                                            new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'DOCENTE DE ÁREA', bold: true, size: 18, font: 'Calibri' })] })
+                                        ], borders: NO_BORDERS
+                                    })
+                                ]
+                            })
+                        ]
+                    })
+                ],
+            }],
+        });
+
+        const blob = await Packer.toBlob(doc);
+        saveAs(blob, `Unidad_${(d.ciclo_grado || 'Grado').replace(/\s+/g, '_')}_EduFisica.docx`);
+    } catch (error) {
+        console.error("Error Word:", error);
+        alert("Error: " + error.message);
+    }
+};
+
+
+// ==================== UNIT PREVIEW COMPONENT ====================
+function UnitPreview({ data }) {
+    if (!data) return null;
+    const d = data.datos_informativos;
+
+    const tableStyle = {
+        width: '100%', borderCollapse: 'collapse', marginBottom: '1.5rem', fontSize: '0.85rem',
+    };
+    const thStyle = {
+        background: 'linear-gradient(135deg, #1a56db, #1e40af)', color: '#fff',
+        padding: '0.6rem 0.8rem', textAlign: 'left', fontWeight: 700,
+        fontSize: '0.85rem', border: '1px solid #334155',
+    };
+    const subThStyle = {
+        background: 'rgba(30, 64, 175, 0.15)', color: 'var(--color-primary)',
+        padding: '0.5rem 0.8rem', fontWeight: 600, fontSize: '0.8rem',
+        border: '1px solid rgba(100, 116, 139, 0.3)', whiteSpace: 'nowrap',
+    };
+    const tdStyle = {
+        padding: '0.5rem 0.8rem', border: '1px solid rgba(100, 116, 139, 0.3)',
+        color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '0.82rem',
+    };
+
+    return (
+        <div className="admin-table-wrapper" style={{ padding: '0.5rem', background: '#0f172a' }}>
+            {/* TÍTULO */}
+            <div style={{ textAlign: 'center', marginBottom: '1.5rem' }}>
+                <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem', textTransform: 'uppercase' }}>
+                    📖 {data.titulo_unidad || 'UNIDAD DE APRENDIZAJE'}
+                </h2>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Alineado al CNEB</span>
+            </div>
+
+            {/* I. DATOS INFORMATIVOS */}
+            <table style={tableStyle}>
+                <thead><tr><th colSpan="4" style={thStyle}>II. DATOS INFORMATIVOS</th></tr></thead>
+                <tbody>
+                    <tr><td style={subThStyle}>Docente</td><td style={tdStyle}>{d.docente}</td><td style={subThStyle}>I.E.</td><td style={tdStyle}>{d.ie}</td></tr>
+                    <tr><td style={subThStyle}>Director(a)</td><td style={tdStyle}>{d.director}</td><td style={subThStyle}>Área</td><td style={tdStyle}>{d.area}</td></tr>
+                    <tr><td style={subThStyle}>Nivel</td><td style={tdStyle}>{d.nivel}</td><td style={subThStyle}>Grado/Ciclo</td><td style={tdStyle}>{d.ciclo_grado}</td></tr>
+                    <tr><td style={subThStyle}>Año Lectivo</td><td style={tdStyle}>{d.anio} ({d.periodo})</td><td style={subThStyle}>Duración</td><td style={tdStyle}>{d.duracion}</td></tr>
+                    <tr><td style={subThStyle}>Fechas</td><td style={tdStyle}>{d.fechas}</td><td style={subThStyle}>Estudiantes/Turno</td><td style={tdStyle}>{d.num_estudiantes} / {d.turno}</td></tr>
+                </tbody>
+            </table>
+
+            {/* JUSTIFICACIÓN Y PROPÓSITO */}
+            <table style={tableStyle}>
+                <thead><tr><th style={thStyle}>III. JUSTIFICACIÓN Y PROPÓSITO DE LA UNIDAD</th></tr></thead>
+                <tbody>
+                    <tr><td style={{ ...tdStyle, lineHeight: 1.8 }}><strong>Justificación:</strong><br />{data.justificacion}</td></tr>
+                    <tr><td style={{ ...tdStyle, lineHeight: 1.8 }}><strong>Propósito General:</strong><br />{data.proposito_unidad}</td></tr>
+                </tbody>
+            </table>
+
+            {/* SITUACIÓN SIGNIFICATIVA */}
+            <table style={tableStyle}>
+                <thead><tr><th style={thStyle}>IV. SITUACIÓN SIGNIFICATIVA / RETO</th></tr></thead>
+                <tbody><tr><td style={{ ...tdStyle, lineHeight: 1.8, fontStyle: 'italic', background: 'rgba(39, 174, 96, 0.05)' }}>{data.situacion_significativa}</td></tr></tbody>
+            </table>
+
+            {/* PRODUCTO */}
+            <table style={tableStyle}>
+                <thead><tr><th style={thStyle}>V. PRODUCTO DE LA UNIDAD</th></tr></thead>
+                <tbody><tr><td style={{ ...tdStyle, lineHeight: 1.8, fontWeight: 700, color: 'var(--color-primary)' }}>{data.producto_unidad}</td></tr></tbody>
+            </table>
+
+            {/* PROPÓSITOS DE APRENDIZAJE */}
+            <table style={tableStyle}>
+                <thead><tr><th colSpan="3" style={thStyle}>VI. PROPÓSITOS DE APRENDIZAJE</th></tr></thead>
+                <tbody>
+                    <tr><td style={subThStyle}>Competencia y Capacidades</td><td style={subThStyle}>Estándar (CNEB)</td><td style={subThStyle}>Desempeños</td></tr>
+                    {(data.competencias_capacidades_estandar || []).map((comp, i) => (
+                        <tr key={i}>
+                            <td style={{ ...tdStyle, width: '30%' }}>
+                                <strong style={{ color: 'var(--text-primary)' }}>{comp.competencia}</strong>
+                                <ul style={{ paddingLeft: '1.2rem', marginTop: '0.5rem', marginBottom: 0 }}>
+                                    {(comp.capacidades || []).map((c, j) => <li key={j} style={{ marginBottom: '0.2rem' }}>{c}</li>)}
+                                </ul>
+                            </td>
+                            <td style={{ ...tdStyle, width: '35%', fontStyle: 'italic', opacity: 0.9 }}>{comp.estandar}</td>
+                            <td style={{ ...tdStyle, width: '35%' }}>
+                                <ul style={{ paddingLeft: '1.2rem', margin: 0 }}>
+                                    {(comp.desempenos || []).map((d, j) => <li key={j} style={{ marginBottom: '0.4rem' }}>{d}</li>)}
+                                </ul>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+
+            {/* ENFOQUES TRANSVERSALES */}
+            <table style={tableStyle}>
+                <thead><tr><th colSpan="3" style={thStyle}>VII. ENFOQUES TRANSVERSALES</th></tr></thead>
+                <tbody>
+                    <tr><td style={subThStyle}>Enfoque</td><td style={subThStyle}>Valores</td><td style={subThStyle}>Actitudes</td></tr>
+                    {(data.enfoques_transversales || []).map((enf, i) => (
+                        <tr key={i}>
+                            <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--text-primary)', width: '25%' }}>{enf.enfoque}</td>
+                            <td style={{ ...tdStyle, width: '25%' }}>{enf.valores}</td>
+                            <td style={{ ...tdStyle }}>
+                                <div style={{ marginBottom: '0.5rem' }}><strong>Estudiantes:</strong> {enf.actitudes}</div>
+                                <div><strong>Docente:</strong> {enf.actitud_docente}</div>
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+
+            {/* SECUENCIA DE SESIONES */}
+            <table style={tableStyle}>
+                <thead>
+                    <tr><th colSpan="4" style={thStyle}>VIII. SECUENCIA DIDÁCTICA DE SESIONES</th></tr>
+                    <tr><td style={{ ...subThStyle, textAlign: 'center' }}>Semana</td><td style={subThStyle}>Título de la Sesión</td><td style={subThStyle}>Propósito</td><td style={{ ...subThStyle, textAlign: 'center' }}>Tiempo</td></tr>
+                </thead>
+                <tbody>
+                    {(data.secuencia_sesiones || []).map((ses, i) => (
+                        <tr key={i} style={{ background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}>
+                            <td style={{ ...tdStyle, fontWeight: 700, color: 'var(--color-primary)', textAlign: 'center', width: '10%' }}>{ses.semana}</td>
+                            <td style={{ ...tdStyle, fontWeight: 600, color: 'var(--text-primary)', width: '35%' }}>{ses.titulo}</td>
+                            <td style={{ ...tdStyle, width: '45%' }}>{ses.proposito}</td>
+                            <td style={{ ...tdStyle, textAlign: 'center', width: '10%' }}>{ses.tiempo}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+
+            {/* EVALUACIÓN */}
+            {data.evaluacion && (
+                <table style={tableStyle}>
+                    <thead><tr><th colSpan="3" style={thStyle}>IX. EVALUACIÓN DE LA UNIDAD</th></tr></thead>
+                    <tbody>
+                        <tr><td style={subThStyle}>Criterios Generales</td><td style={subThStyle}>Evidencias</td><td style={subThStyle}>Instrumentos</td></tr>
+                        <tr>
+                            <td style={tdStyle}><ul style={{ paddingLeft: '1.2rem', margin: 0 }}>{(data.evaluacion.criterios || []).map((c, i) => <li key={i}>{c}</li>)}</ul></td>
+                            <td style={tdStyle}><ul style={{ paddingLeft: '1.2rem', margin: 0 }}>{(data.evaluacion.evidencias || []).map((e, i) => <li key={i}>{e}</li>)}</ul></td>
+                            <td style={tdStyle}><ul style={{ paddingLeft: '1.2rem', margin: 0 }}>{(data.evaluacion.instrumentos || []).map((inst, i) => <li key={i}>{inst}</li>)}</ul></td>
+                        </tr>
+                    </tbody>
+                </table>
+            )}
+
+            {/* ORIENTACIONES Y REFERENCIAS */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <table style={{ ...tableStyle, marginBottom: 0 }}>
+                    <thead><tr><th style={thStyle}>X. ORIENTACIONES PEDAGÓGICAS</th></tr></thead>
+                    <tbody><tr><td style={{ ...tdStyle, lineHeight: 1.6 }}>{data.orientaciones_pedagogicas}</td></tr></tbody>
+                </table>
+                <table style={{ ...tableStyle, marginBottom: 0 }}>
+                    <thead><tr><th style={thStyle}>XI. REFERENCIAS BIBLIOGRÁFICAS</th></tr></thead>
+                    <tbody><tr><td style={{ ...tdStyle, lineHeight: 1.6 }}><ul style={{ paddingLeft: '1.2rem', margin: 0 }}>{(data.referencias || []).map((r, i) => <li key={i}>{r}</li>)}</ul></td></tr></tbody>
+                </table>
+            </div>
+        </div>
+    );
+}
+
 
 const STEPS = [
     'Datos Informativos',
@@ -18,7 +378,7 @@ const UnitsPage = ({ onNavigate, user }) => {
     const [view, setView] = useState('list'); // 'list' or 'create'
     const [currentStep, setCurrentStep] = useState(0);
     const [generating, setGenerating] = useState(false);
-    const [result, setResult] = useState('');
+    const [unitData, setUnitData] = useState(null);
 
     const [formData, setFormData] = useState({
         // Paso 1: Datos
@@ -84,122 +444,73 @@ const UnitsPage = ({ onNavigate, user }) => {
 
     const calculatedEndDate = calculateEndDate(formData.fechaInicio, formData.duracion);
 
+    const [suggestingField, setSuggestingField] = useState(null);
+
+    const handleSuggestAI = async (field) => {
+        setSuggestingField(field);
+        let prompt = "";
+        const contextoGrado = `${formData.grado || 'un grado'} de ${formData.nivel || 'un nivel'}`;
+
+        switch (field) {
+            case 'tituloUnidad':
+                prompt = `Actúa como experto en educación. Sugiere 1 único título completo, motivador y creativo (máximo 12 palabras) para una unidad de aprendizaje de Educación Física para estudiantes de ${contextoGrado}. Temas: ${formData.temasClave || 'educación física'}. REGLA: Devuelve SOLO el título. PROHIBIDO usar puntos suspensivos (...). PROHIBIDO usar comillas o introducciones.`;
+                break;
+            case 'temasClave':
+                prompt = `Sugiere temas clave para una unidad de Educación Física para ${contextoGrado}. REGLA: Devuelve SOLO los temas separados por comas, finalizando con un punto final. PROHIBIDO usar puntos suspensivos, viñetas o texto de introducción.`;
+                break;
+            case 'contexto':
+                prompt = `Sugiere un breve contexto sociodemográfico y necesidades de aprendizaje típicas de estudiantes de ${contextoGrado} en Perú, para Educación Física. REGLA: Devuelve SOLO un párrafo completo redactado, finalizado con punto final. PROHIBIDO usar puntos suspensivos.`;
+                break;
+            case 'integracionAreas':
+                prompt = `Sugiere áreas curriculares con las que se podría integrar una unidad de Educación Física sobre ${formData.temasClave || 'deportes y salud'} para ${contextoGrado}, y explícalo de forma breve. REGLA: Devuelve SOLO el párrafo redactado completo. PROHIBIDO usar puntos suspensivos.`;
+                break;
+            case 'productoFinal':
+                prompt = `Sugiere un producto final (tangible o indirecto) completo para una unidad de Educación Física de ${contextoGrado} sobre ${formData.temasClave || 'educación física'}. REGLA: Devuelve SOLO la descripción completa terminando en punto. PROHIBIDO usar puntos suspensivos.`;
+                break;
+            case 'evaluacionFormativa':
+                prompt = `Redacta un breve párrafo con los lineamientos de evaluación formativa orientados a competencias para una unidad de Educación Física de ${contextoGrado}. REGLA: Termina la idea completamente con un punto. PROHIBIDO usar puntos suspensivos.`;
+                break;
+            default:
+                break;
+        }
+
+        try {
+            const res = await generateFastSuggestion(prompt);
+            setFormData(prev => ({ ...prev, [field]: res.replace(/^"|"$/g, '').trim() }));
+        } catch (error) {
+            console.error(`Error generating suggestion for ${field}`, error);
+        } finally {
+            setSuggestingField(null);
+        }
+    };
+
     const handleGenerate = async () => {
         setGenerating(true);
 
-        let situacionTexto = formData.iaGenerarSituacion
-            ? `Crea una situación significativa retadora (de 3 a 4 párrafos) contextualizada para estudiantes de ${formData.grado} de ${formData.nivel}, considerando su entorno: ${formData.contexto || 'entorno general'}. Debe terminar con un reto claro.`
-            : formData.situacionManual;
-
-        const prompt = `Actúa como experto en currículo de Educación Física (Perú). Genera una UNIDAD DE APRENDIZAJE estrictamente en formato Markdown y con la siguiente estructura exacta de 14 números romanos:
-
-I. TÍTULO DE LA UNIDAD
-"${formData.tituloUnidad || 'Generar título motivador relacionado a los temas'}"
-
-II. DATOS INFORMATIVOS
-- Institución Educativa: ${formData.ie || 'No especificada'}
-- Director/a: ${formData.director || 'No especificada'}
-- Docente: ${formData.docente || 'No especificado'}
-- Nivel: ${formData.nivel}
-- ${formData.planificarPor}: ${formData.grado}
-- Área Curricular: ${formData.area}
-- Año Lectivo: ${formData.anio}
-- Periodo: ${formData.periodo}
-- Duración: ${formData.duracion} semana(s)
-- Fecha de Inicio: ${formData.fechaInicio || 'Pendiente'}
-- Fecha de Fin: ${calculatedEndDate || 'Pendiente'}
-- Nº de Estudiantes: ${formData.numEstudiantes || 'No especificado'}
-- Turno: ${formData.turno}
-
-III. JUSTIFICACIÓN
-Redacta una justificación fundamentada pedagógicamente (2 a 3 párrafos cortos) de por qué se enseña esta unidad, considerando los temas clave (${formData.temasClave || 'temas pertinentes correspondientes'}) y cómo beneficia a los estudiantes.
-
-IV. SITUACIÓN SIGNIFICATIVA
-${situacionTexto}
-
-V. PRODUCTO DE LA UNIDAD
-${formData.productoFinal || 'Sugerir un producto tangible/intangible adecuado relacionado a la unidad.'}
-
-VI. PROPÓSITO DE LA UNIDAD
-Redactar un párrafo indicando el propósito general alineado a las competencias (${formData.competencias.join(', ')}).
-
-VII. PROPÓSITOS DE APRENDIZAJE
-Crea una TABLA Markdown detallada con las columnas: Área | Competencia/Capacidades | Estándar | Desempeños | Evidencias | Instrumentos. Debe incluir las competencias: ${formData.competencias.join(', ')}.
-
-VIII. COMPETENCIAS TRANSVERSALES
-Crea una TABLA Markdown con las columnas: Competencia Transversal | Capacidades que se trabajarán | Desempeños/Acciones concretas en esta unidad | Evidencias. Obligatorio incluir: "Gestiona su aprendizaje de manera autónoma" y "Se desenvuelve en entornos virtuales generados por las TIC".
-
-IX. ENFOQUES TRANSVERSALES
-Crea una TABLA Markdown con las columnas: Enfoque Transversal | Valores | Actitudes - Estudiantes | Actitudes - Docente. Incluye obligatoriamente: ${formData.enfoques.join(', ')}.
-
-X. SECUENCIA DIDÁCTICA DE LA UNIDAD
-Crea una TABLA Markdown con esta lista cronológica para ${formData.duracion} semanas. Columnas: Semana Nº | Área | Título | Propósito | Competencias | Tiempo | Recursos | Evaluación. 
-
-XI. RECURSOS Y MATERIALES
-Organízalo con subtítulos:
-- Para el docente:
-- Para el estudiante:
-- Tecnológicos:
-
-XII. ORIENTACIONES PEDAGÓGICAS
-Organízalo con subtítulos y redactar breves estrategias para:
-A. Estrategias Metodológicas
-B. Atención a la Diversidad
-C. Uso de Materiales y Recursos
-D. Organización del Espacio
-
-XIII. REFERENCIAS BIBLIOGRÁFICAS
-Organízalo con subtítulos:
-A. Documentos Normativos del MINEDU
-B. Materiales Educativos para ${formData.grado}
-C. Recursos Digitales del MINEDU
-
-XIV. CAMPO DE FIRMAS
-Crear 2 espacios para firmas: "${formData.docente || 'Docente'}" y "${formData.director || 'Director/a'}".
-
-Asegúrate de que todo el documento contenga exclusivamente la estructura pedida con tablas Markdown muy limpias y listas para presentar.`;
-
         try {
-            const res = await generateLessonPlan(prompt);
-            setResult(res);
-            setCurrentStep(4); // Show result
+            const result = await generateStructuredUnit(formData);
+            if (result.success) {
+                setUnitData(result.data);
+                setCurrentStep(4);
+            } else {
+                alert("Error: " + result.error);
+            }
         } catch (error) {
             console.error("Error generating unit", error);
+            alert("Error: " + error.message);
         } finally {
             setGenerating(false);
         }
     };
 
-    const downloadAsWord = () => {
-        if (!result) return;
-
-        const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'><head><meta charset='utf-8'><title>Unidad Didáctica</title></head><body>";
-        const footer = "</body></html>";
-
-        // Very basic simple replacement from Markdown to HTML to make Word format it slightly better
-        let htmlSource = result
-            .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-            .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-            .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-            .replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>')
-            .replace(/\*\*(.*)\*\*/gim, '<strong>$1</strong>')
-            .replace(/\*(.*)\*/gim, '<em>$1</em>')
-            .replace(/\n\n/gim, '<p></p>')
-            .replace(/\n/gim, '<br />');
-
-        // Simple table replacements wrapper
-        htmlSource = htmlSource.replace(/\|(.+)\|/gim, '<tr><td>$1</td></tr>');
-        htmlSource = htmlSource.replace(/<\/tr><br \/><tr>/gim, '</tr><tr>');
-
-        const sourceHTML = header + htmlSource + footer;
-
-        const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
-        const fileDownload = document.createElement("a");
-        document.body.appendChild(fileDownload);
-        fileDownload.href = source;
-        fileDownload.download = `Unidad_Educacion_Fisica_${formData.grado || 'Generada'}.doc`;
-        fileDownload.click();
-        document.body.removeChild(fileDownload);
+    const downloadAsWord = async () => {
+        if (!unitData) return;
+        try {
+            await exportToWord(unitData);
+        } catch (err) {
+            console.error("Error exportando Word:", err);
+            alert("Error al intentar descargar Word.");
+        }
     };
 
     // -- Sub-components for Steps --
@@ -328,30 +639,45 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
             <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <label className="form-label" style={{ fontSize: '0.85rem', marginBottom: 0 }}>1. Título de la Unidad:</label>
-                    <button className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem', gap: '0.3rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: 'none' }}>
-                        <Sparkles size={10} /> Sugerir Título
+                    <button type="button" onClick={() => handleSuggestAI('tituloUnidad')} disabled={suggestingField === 'tituloUnidad'} className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem', gap: '0.3rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: 'none' }}>
+                        {suggestingField === 'tituloUnidad' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} Sugerir Título
                     </button>
                 </div>
-                <input type="text" className="form-input" placeholder="Ej: Conocemos nuestro cuerpo y mejoramos la salud..." value={formData.tituloUnidad} onChange={e => setFormData({ ...formData, tituloUnidad: e.target.value })} />
+                <textarea className="form-textarea" placeholder="Ej: Conocemos nuestro cuerpo y mejoramos la salud..." value={formData.tituloUnidad} onChange={e => setFormData({ ...formData, tituloUnidad: e.target.value })} style={{ minHeight: '60px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
             </div>
 
             <div className="form-group">
-                <label className="form-label" style={{ fontSize: '0.85rem' }}>2. Temas Clave por Área:</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ fontSize: '0.85rem', marginBottom: 0 }}>2. Temas Clave por Área:</label>
+                    <button type="button" onClick={() => handleSuggestAI('temasClave')} disabled={suggestingField === 'temasClave'} className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem', gap: '0.3rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: 'none' }}>
+                        {suggestingField === 'temasClave' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} Sugerir Temas
+                    </button>
+                </div>
                 <div style={{ background: 'var(--glass-bg)', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
                     <label style={{ fontSize: '0.85rem', color: 'var(--color-primary)', display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>Educación Física:</label>
-                    <textarea className="form-textarea" placeholder="Ej: Medidas antropométricas, juegos tradicionales, coordinación..." value={formData.temasClave} onChange={e => setFormData({ ...formData, temasClave: e.target.value })} style={{ minHeight: '80px', border: '1px solid rgba(255,255,255,0.05)' }} />
+                    <textarea className="form-textarea" placeholder="Ej: Medidas antropométricas, juegos tradicionales, coordinación..." value={formData.temasClave} onChange={e => setFormData({ ...formData, temasClave: e.target.value })} style={{ minHeight: '80px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
                 </div>
             </div>
 
             <div className="form-group">
-                <label className="form-label" style={{ fontSize: '0.85rem' }}>3. Contexto de los Estudiantes:</label>
-                <textarea className="form-textarea" placeholder="Contexto de los estudiantes (Opcional pero recomendado). Ejm: Los estudiantes viven en una zona rural..." value={formData.contexto} onChange={e => setFormData({ ...formData, contexto: e.target.value })} style={{ minHeight: '100px' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ fontSize: '0.85rem', marginBottom: 0 }}>3. Contexto de los Estudiantes:</label>
+                    <button type="button" onClick={() => handleSuggestAI('contexto')} disabled={suggestingField === 'contexto'} className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem', gap: '0.3rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: 'none' }}>
+                        {suggestingField === 'contexto' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} Sugerir Contexto
+                    </button>
+                </div>
+                <textarea className="form-textarea" placeholder="Contexto de los estudiantes (Opcional pero recomendado). Ejm: Los estudiantes viven en una zona rural..." value={formData.contexto} onChange={e => setFormData({ ...formData, contexto: e.target.value })} style={{ minHeight: '100px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
             </div>
 
             <div className="form-group">
-                <label className="form-label" style={{ fontSize: '0.85rem' }}>3.1. Integración con otras áreas (Opcional):</label>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ fontSize: '0.85rem', marginBottom: 0 }}>3.1. Integración con otras áreas (Opcional):</label>
+                    <button type="button" onClick={() => handleSuggestAI('integracionAreas')} disabled={suggestingField === 'integracionAreas'} className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem', gap: '0.3rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: 'none' }}>
+                        {suggestingField === 'integracionAreas' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} Sugerir Integración
+                    </button>
+                </div>
                 <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>Si esta unidad se vincula con otras áreas curriculares, especifica cuáles y cómo. Déjalo vacío si es de área única.</p>
-                <textarea className="form-textarea" placeholder="Ejemplo: Esta unidad se vincula con Comunicación para la producción de textos descriptivos..." value={formData.integracionAreas} onChange={e => setFormData({ ...formData, integracionAreas: e.target.value })} style={{ minHeight: '80px' }} />
+                <textarea className="form-textarea" placeholder="Ejemplo: Esta unidad se vincula con Comunicación para la producción de textos descriptivos..." value={formData.integracionAreas} onChange={e => setFormData({ ...formData, integracionAreas: e.target.value })} style={{ minHeight: '80px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
             </div>
 
             <div className="form-group">
@@ -379,7 +705,7 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
 
                 {!formData.iaGenerarSituacion && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} style={{ marginTop: '1rem' }}>
-                        <textarea className="form-textarea" placeholder="Redacta la situación problemática completa aquí..." value={formData.situacionManual} onChange={e => setFormData({ ...formData, situacionManual: e.target.value })} style={{ minHeight: '150px' }} />
+                        <textarea className="form-textarea" placeholder="Redacta la situación problemática completa aquí..." value={formData.situacionManual} onChange={e => setFormData({ ...formData, situacionManual: e.target.value })} style={{ minHeight: '150px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
                     </motion.div>
                 )}
             </div>
@@ -404,7 +730,7 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
                 <label className="form-label" style={{ fontSize: '0.9rem', marginBottom: '1rem', color: 'var(--color-primary)', fontWeight: 600 }}>14. Competencias a desarrollar:</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {competenciasFisica.map(comp => (
-                        <label key={comp} style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
+                        <div key={comp} onClick={() => toggleArrayItem('competencias', comp)} style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
                             <div style={{
                                 width: '22px', height: '22px', borderRadius: '4px',
                                 border: `2px solid ${formData.competencias.includes(comp) ? 'var(--color-primary)' : 'var(--text-muted)'} `,
@@ -414,7 +740,7 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
                                 {formData.competencias.includes(comp) && <Check size={14} color="#000" strokeWidth={3} />}
                             </div>
                             <span style={{ fontSize: '0.95rem', color: formData.competencias.includes(comp) ? 'white' : 'var(--text-secondary)' }}>{comp}</span>
-                        </label>
+                        </div>
                     ))}
                 </div>
             </div>
@@ -423,7 +749,7 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
                 <label className="form-label" style={{ fontSize: '0.9rem', marginBottom: '1rem', color: 'var(--color-primary)', fontWeight: 600 }}>15. Enfoques Transversales a priorizar:</label>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
                     {enfoquesLista.map(enf => (
-                        <label key={enf} style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
+                        <div key={enf} onClick={() => toggleArrayItem('enfoques', enf)} style={{ display: 'flex', alignItems: 'center', gap: '1rem', cursor: 'pointer' }}>
                             <div style={{
                                 width: '22px', height: '22px', borderRadius: '4px',
                                 border: `2px solid ${formData.enfoques.includes(enf) ? 'var(--color-primary)' : 'var(--text-muted)'} `,
@@ -433,7 +759,7 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
                                 {formData.enfoques.includes(enf) && <Check size={14} color="#000" strokeWidth={3} />}
                             </div>
                             <span style={{ fontSize: '0.9rem', color: formData.enfoques.includes(enf) ? 'white' : 'var(--text-secondary)' }}>{enf}</span>
-                        </label>
+                        </div>
                     ))}
                 </div>
             </div>
@@ -441,16 +767,21 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
             <div className="form-group">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
                     <label className="form-label" style={{ fontSize: '0.85rem', marginBottom: 0 }}>16. Producto Final de la Unidad:</label>
-                    <button className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem', gap: '0.3rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: 'none' }}>
-                        <Sparkles size={10} /> Sugerir Producto
+                    <button type="button" onClick={() => handleSuggestAI('productoFinal')} disabled={suggestingField === 'productoFinal'} className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem', gap: '0.3rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: 'none' }}>
+                        {suggestingField === 'productoFinal' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} Sugerir Producto
                     </button>
                 </div>
-                <input type="text" className="form-input" placeholder="Ej: Organización de un mini-torneo deportivo, Exposición sobre vida saludable..." value={formData.productoFinal} onChange={e => setFormData({ ...formData, productoFinal: e.target.value })} />
+                <input type="text" className="form-input" placeholder="Ej: Organización de un mini-torneo deportivo, Exposición sobre vida saludable..." value={formData.productoFinal} onChange={e => setFormData({ ...formData, productoFinal: e.target.value })} style={{ background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
             </div>
 
             <div className="form-group">
-                <label className="form-label" style={{ fontSize: '0.85rem' }}>17. Evaluación Formativa (Ruta general):</label>
-                <textarea className="form-textarea" placeholder="Narra los lineamientos de evaluación..." value={formData.evaluacionFormativa} onChange={e => setFormData({ ...formData, evaluacionFormativa: e.target.value })} style={{ minHeight: '100px' }} />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                    <label className="form-label" style={{ fontSize: '0.85rem', marginBottom: 0 }}>17. Evaluación Formativa (Ruta general):</label>
+                    <button type="button" onClick={() => handleSuggestAI('evaluacionFormativa')} disabled={suggestingField === 'evaluacionFormativa'} className="btn btn-secondary" style={{ padding: '0.2rem 0.6rem', fontSize: '0.7rem', gap: '0.3rem', background: 'rgba(59, 130, 246, 0.1)', color: '#60a5fa', border: 'none' }}>
+                        {suggestingField === 'evaluacionFormativa' ? <Loader2 size={10} className="animate-spin" /> : <Sparkles size={10} />} Sugerir Evaluación
+                    </button>
+                </div>
+                <textarea className="form-textarea" placeholder="Narra los lineamientos de evaluación..." value={formData.evaluacionFormativa} onChange={e => setFormData({ ...formData, evaluacionFormativa: e.target.value })} style={{ minHeight: '100px', background: 'rgba(0,0,0,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.1)' }} />
             </div>
         </div>
     );
@@ -517,7 +848,7 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1.5rem' }}>
                         <div>
                             <h1 style={{ fontSize: '2.5rem', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                Generador de <span className="text-gradient">Unidades V.4</span>
+                                Generador de <span className="text-gradient">Unidades</span>
                             </h1>
                             <p style={{ color: 'var(--text-secondary)' }}>Potenciado por Inteligencia Artificial para el maestro moderno.</p>
                         </div>
@@ -562,7 +893,7 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
                 </div>
 
                 <div className="glass-static" style={{ marginTop: '3rem', padding: '2rem' }}>
-                    <h3 style={{ marginBottom: '1.5rem' }}>¿Qué te resuelve el Generador V.4?</h3>
+                    <h3 style={{ marginBottom: '1.5rem' }}>¿Qué te resuelve el Generador?</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2rem' }}>
                         <div style={{ display: 'flex', gap: '1rem' }}>
                             <div style={{ color: 'var(--color-primary)' }}><Layout size={20} /></div>
@@ -601,9 +932,9 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
                 </button>
                 <div style={{ textAlign: 'center' }}>
                     <h2 style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--color-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', justifyContent: 'center' }}>
-                        Generador de Unidades V.4
+                        Generador de Unidades
                     </h2>
-                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Potenciado por Google Gemini</p>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>Asistente inteligente para docentes</p>
                 </div>
                 <div style={{ width: '40px' }}></div> {/* Spacer */}
             </div>
@@ -628,10 +959,10 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
                         {currentStep === 2 && Step3Competencias()}
                         {currentStep === 3 && Step4Confirmacion()}
 
-                        {currentStep === 4 && result && (
-                            <div style={{ background: '#0f172a', padding: '2rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)', overflowY: 'auto', overflowX: 'auto', maxHeight: '600px', whiteSpace: 'pre-wrap', lineHeight: 1.8, fontSize: '0.95rem' }}>
+                        {currentStep === 4 && unitData && (
+                            <div style={{ background: '#0f172a', padding: '1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--glass-border)' }}>
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                                    <button className="btn btn-secondary" onClick={() => { navigator.clipboard.writeText(result); alert("¡Documento Copiado!") }}>Copiar Texto</button>
+                                    <button className="btn btn-secondary" onClick={() => { navigator.clipboard.writeText(JSON.stringify(unitData, null, 2)); alert("¡JSON Copiado!") }}>Copiar Texto</button>
                                     <button className="btn btn-secondary" onClick={downloadAsWord}>
                                         <FileText size={16} style={{ marginRight: '0.5rem' }} /> Descargar en Word
                                     </button>
@@ -639,7 +970,9 @@ Asegúrate de que todo el documento contenga exclusivamente la estructura pedida
                                         <Download size={16} style={{ marginRight: '0.5rem' }} /> Imprimir PDF
                                     </button>
                                 </div>
-                                {result}
+                                <div style={{ overflowX: 'auto' }}>
+                                    <UnitPreview data={unitData} />
+                                </div>
                             </div>
                         )}
                     </div>

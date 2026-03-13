@@ -41,11 +41,7 @@
   },
   "auth": {
     "providers": {
-      "emailPassword": true,
-      "googleSignIn": {
-        "oAuthBrandDisplayName": "EduFisica AI",
-        "supportEmail": "citymartlamas@gmail.com"
-      }
+      "emailPassword": true
     }
   }
 }
